@@ -1,0 +1,83 @@
+export type Outlet = {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  radiusKm: number;
+  minPrepMinutes: number;
+  fssai: string;
+  open: boolean;
+};
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: "CUSTOMER" | "KITCHEN" | "MANAGER" | "ADMIN";
+  outletId: string | null;
+};
+export type MenuItem = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  pricePaise: number;
+  familyPricePaise: number | null;
+  portion: string;
+  vegetarian: boolean;
+  spice: string;
+  allergens: string[];
+  photo: string | null;
+  prepMinutes: number;
+  active: boolean;
+  featured: boolean;
+  available: boolean;
+  availability?: { outletId: string; available: boolean }[];
+};
+export type AddOn = {
+  id: string;
+  name: string;
+  pricePaise: number;
+  allergens: string[];
+};
+export type MenuData = {
+  outlets: Outlet[];
+  outlet: Outlet;
+  items: MenuItem[];
+  addOns: AddOn[];
+};
+export type Order = {
+  id: string;
+  number: string;
+  userId: string;
+  outletId: string;
+  outlet: Outlet;
+  status: string;
+  paymentStatus: string;
+  totalPaise: number;
+  gstPaise: number;
+  fulfillment: string;
+  address: string;
+  phone: string;
+  note: string;
+  createdAt: string;
+  promisedAt: string | null;
+  originalPromisedAt: string | null;
+  readyAt: string | null;
+  estimateMinutes: number | null;
+  estimateFallback: boolean;
+  expiresAt: string;
+  version: number;
+  lines: {
+    id: string;
+    itemId: string;
+    name: string;
+    photo: string | null;
+    portion: string;
+    quantity: number;
+    unitPaise: number;
+    addOns: { id: string; name: string; pricePaise: number }[];
+  }[];
+  payments: { id: string; method: string; status: string }[];
+  messages: { id: string; kind: string; body: string; createdAt: string }[];
+};

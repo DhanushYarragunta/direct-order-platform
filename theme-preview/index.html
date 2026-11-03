@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Company A — Hyderabad, served fresh</title>
+<style>
+html {color-scheme: light dark;}
+body {margin:0;background:light-dark(#edece5,#0f1b16);}
+#hyderabad-preview {max-width:1200px;margin:0 auto;}
+button,a,select,input,summary {cursor:pointer;}
+:focus-visible {outline:3px solid #cc792e;outline-offset:3px;}
+
+  #hyderabad-preview {
+    --food-bg: light-dark(#faf7f0, #15251f);
+    --food-surface: light-dark(#fffdf8, #1e3027);
+    --food-ink: light-dark(#203d2e, #f5f0e5);
+    --food-muted: light-dark(#667165, #b1bdb1);
+    --food-line: light-dark(#dedfd3, #425045);
+    --food-accent: light-dark(#234b35, #d2e3c4);
+    --food-on-accent: light-dark(#fffdf5, #193321);
+    --food-soft: light-dark(#edf0e4, #2b4030);
+    --food-gold: light-dark(#a95820, #edb674);
+    --food-radius: 16px;
+    color: var(--food-ink); background: var(--food-bg);
+    font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    font-size: 14px; line-height: 1.5; position: relative;
+    -webkit-font-smoothing: antialiased;
+  }
+  #hyderabad-preview * { box-sizing: border-box; }
+  #hyderabad-preview [hidden] { display: none !important; }
+  #hyderabad-preview h1, #hyderabad-preview h2, #hyderabad-preview h3, #hyderabad-preview p { margin: 0; }
+  #hyderabad-preview button, #hyderabad-preview select { font: inherit; }
+  #hyderabad-preview button { min-height: 44px; }
+  #hyderabad-preview a { color: inherit; text-decoration: none; }
+  #hyderabad-preview .food-announcement { padding: 9px 34px; background: var(--food-accent); color: var(--food-on-accent); display: flex; justify-content: space-between; gap: 16px; font-size: 11px; letter-spacing: .075em; }
+  #hyderabad-preview .food-header { min-height: 99px; padding: 20px 36px; display: flex; align-items: center; gap: 26px; border-bottom: 1px solid var(--food-line); }
+  #hyderabad-preview .food-brand { display: flex; gap: 11px; align-items: center; flex-shrink: 0; }
+  #hyderabad-preview .food-mark { display: grid; place-items: center; width: 40px; height: 44px; border: 1px solid var(--food-ink); border-radius: 20px 20px 4px 4px; }
+  #hyderabad-preview .food-mark svg { width: 24px; height: 24px; }
+  #hyderabad-preview .food-brand-name { font-family: Georgia, serif; font-weight: 400; font-size: 26px; line-height: 1; letter-spacing: -.8px; }
+  #hyderabad-preview .food-brand-sub { margin-top: 6px; font-size: 8px; letter-spacing: 2px; }
+  #hyderabad-preview .food-location { display: flex; align-items: center; gap: 8px; padding-left: 25px; border-left: 1px solid var(--food-line); }
+  #hyderabad-preview .food-location label { display: block; color: var(--food-muted); font-size: 10px; line-height: 1.1; }
+  #hyderabad-preview .food-location select { margin: 2px 0 -8px -4px; background: transparent; border: 0; color: var(--food-ink); font-weight: 600; font-size: 13px; min-height: 40px; max-width: 158px; }
+  #hyderabad-preview .food-location option { color: var(--food-ink); background: var(--food-surface); }
+  #hyderabad-preview .food-nav { display: flex; align-items: center; gap: 22px; margin-left: auto; font-size: 12px; }
+  #hyderabad-preview .food-nav a { min-height: 44px; display: flex; align-items: center; }
+  #hyderabad-preview .food-cart-button { background: transparent; color: var(--food-ink); border: 1px solid var(--food-line); border-radius: 8px; padding: 9px 13px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  #hyderabad-preview .food-count { background: var(--food-accent); color: var(--food-on-accent); border-radius: 50%; min-width: 20px; height: 20px; display: grid; place-items: center; font-size: 10px; }
+  #hyderabad-preview .food-hero { display: grid; grid-template-columns: 1.03fr 1fr; padding: 38px 36px 34px; gap: 20px; align-items: center; }
+  #hyderabad-preview .food-eyebrow { color: var(--food-gold); font-size: 10px; font-weight: 700; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; }
+  #hyderabad-preview .food-eyebrow::before { content: ""; width: 22px; height: 1px; background: currentColor; }
+  #hyderabad-preview h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size: clamp(44px, 5.5vw, 67px); line-height: 1.04; letter-spacing: -2.7px; margin: 21px 0 19px; }
+  #hyderabad-preview h1 em { font-weight: 400; color: var(--food-gold); }
+  #hyderabad-preview .food-intro { max-width: 325px; color: var(--food-muted); line-height: 1.8; font-size: 13px; }
+  #hyderabad-preview .food-primary { background: var(--food-accent); color: var(--food-on-accent); border: 0; border-radius: 7px; min-height: 46px; padding: 13px 19px; display: inline-flex; align-items: center; justify-content: center; gap: 18px; font-size: 12px; font-weight: 600; }
+  #hyderabad-preview .food-hero .food-primary { margin-top: 25px; }
+  #hyderabad-preview .food-small-note { display: flex; align-items: center; gap: 7px; margin-top: 18px; color: var(--food-muted); font-size: 10px; }
+  #hyderabad-preview .food-small-note svg { width: 13px; height: 13px; }
+  #hyderabad-preview .food-hero-art { position: relative; aspect-ratio: 1.06; background: light-dark(#f0e3c7, #423d2b); border-radius: 50% 50% 7px 7px; overflow: hidden; isolation: isolate; }
+  #hyderabad-preview .food-hero-art::before { content: ""; position: absolute; inset: 19px; border: 1px solid light-dark(#dbccab, #706245); border-radius: inherit; }
+  #hyderabad-preview .food-art-label { position: absolute; left: 17px; bottom: 18px; padding: 10px 14px; color: #29402d; background: #fff9e9; border-radius: 3px; font-size: 10px; line-height: 1.6; box-shadow: 0 3px 18px #3b2c1212; transform: rotate(-4deg); }
+  #hyderabad-preview .food-art-label strong { display: block; font-family: Georgia, serif; font-size: 17px; font-weight: 400; }
+  #hyderabad-preview .food-art-caption { position: absolute; bottom: 22px; right: 19px; font-size: 8px; letter-spacing: 1.4px; color: light-dark(#655638, #e9d4ab); writing-mode: vertical-rl; }
+  #hyderabad-preview .food-values { display: flex; justify-content: space-between; gap: 18px; border-top: 1px solid var(--food-line); border-bottom: 1px solid var(--food-line); padding: 17px 36px; font-size: 11px; }
+  #hyderabad-preview .food-value { display: flex; gap: 9px; align-items: center; }
+  #hyderabad-preview .food-value svg { width: 16px; height: 16px; color: var(--food-gold); }
+  #hyderabad-preview .food-menu { padding: 32px 36px 35px; }
+  #hyderabad-preview .food-menu-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; }
+  #hyderabad-preview .food-menu-overline { color: var(--food-gold); font-size: 9px; font-weight: 700; letter-spacing: 1.7px; margin-bottom: 5px; }
+  #hyderabad-preview h2 { font-family: Georgia, serif; font-size: 31px; font-weight: 400; letter-spacing: -.8px; line-height: 1.15; }
+  #hyderabad-preview .food-tax { font-size: 11px; color: var(--food-muted); padding-bottom: 2px; }
+  #hyderabad-preview .food-filter-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0; flex-wrap: wrap; }
+  #hyderabad-preview .food-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  #hyderabad-preview .food-filter { background: transparent; color: var(--food-muted); border: 1px solid var(--food-line); border-radius: 6px; padding: 8px 17px; font-size: 11px; }
+  #hyderabad-preview .food-filter[aria-pressed="true"] { background: var(--food-accent); color: var(--food-on-accent); border-color: var(--food-accent); }
+  #hyderabad-preview .food-veg-filter { display: flex; align-items: center; gap: 7px; font-size: 11px; min-height: 44px; }
+  #hyderabad-preview .food-veg-filter input { accent-color: var(--food-accent); width: 16px; height: 16px; }
+  #hyderabad-preview .food-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  #hyderabad-preview .food-item { border: 1px solid var(--food-line); border-radius: var(--food-radius); overflow: hidden; background: var(--food-surface); display: flex; flex-direction: column; }
+  #hyderabad-preview .food-item-image { position: relative; aspect-ratio: 1.27; background: light-dark(#efe6d3, #413e2f); overflow: hidden; }
+  #hyderabad-preview .food-item:nth-child(2) .food-item-image { background: light-dark(#e8eadc, #334332); }
+  #hyderabad-preview .food-item:nth-child(3) .food-item-image { background: light-dark(#f0ded1, #4a352b); }
+  #hyderabad-preview .food-item:nth-child(4) .food-item-image { background: light-dark(#eee5dc, #423a31); }
+  #hyderabad-preview .food-item-body { padding: 14px 13px 12px; flex: 1; display: flex; flex-direction: column; }
+  #hyderabad-preview .food-diet { display: flex; align-items: center; gap: 6px; color: var(--food-muted); font-size: 11px; margin-bottom: 7px; }
+  #hyderabad-preview .food-diet-mark { flex-shrink: 0; }
+  #hyderabad-preview .food-diet-mark { color: light-dark(#347846, #a0d79a); width: 11px; height: 11px; border: 1px solid currentColor; display: grid; place-items: center; }
+  #hyderabad-preview .food-diet-mark::after { content: ""; width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
+  #hyderabad-preview .food-diet-mark.food-nonveg { color: light-dark(#a4432e, #e9a68f); }
+  #hyderabad-preview .food-diet-mark.food-nonveg::after { border-radius: 0; clip-path: polygon(50% 0,100% 100%,0 100%); width: 6px; height: 6px; }
+  #hyderabad-preview h3 { font-size: 13px; font-weight: 600; line-height: 1.4; }
+  #hyderabad-preview .food-description { color: var(--food-muted); font-size: 11px; line-height: 1.6; margin-top: 6px; }
+  #hyderabad-preview .food-allergens { color: var(--food-muted); font-size: 11px; margin-top: 10px; line-height: 1.5; }
+  #hyderabad-preview .food-item-bottom { display: flex; justify-content: space-between; align-items: center; gap: 7px; padding-top: 14px; margin-top: auto; }
+  #hyderabad-preview .food-price { font-size: 16px; font-weight: 600; letter-spacing: -.4px; }
+  #hyderabad-preview .food-portion { font-size: 11px; color: var(--food-muted); margin-top: 1px; }
+  #hyderabad-preview .food-add { background: var(--food-soft); border: 1px solid var(--food-line); color: var(--food-ink); border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; gap: 9px; font-size: 11px; font-weight: 600; }
+  #hyderabad-preview .food-add:hover { background: var(--food-accent); color: var(--food-on-accent); }
+  #hyderabad-preview .food-empty { padding: 40px 18px; border: 1px dashed var(--food-line); text-align: center; border-radius: var(--food-radius); color: var(--food-muted); }
+  #hyderabad-preview .food-empty button { margin-top: 14px; }
+  #hyderabad-preview .food-basket { border-top: 1px solid var(--food-line); padding: 27px 36px; background: var(--food-soft); }
+  #hyderabad-preview .food-basket-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 17px; }
+  #hyderabad-preview .food-basket h2 { font-size: 25px; }
+  #hyderabad-preview .food-quiet { min-height: 44px; background: transparent; border: 0; color: var(--food-ink); font-size: 11px; text-decoration: underline; text-underline-offset: 4px; }
+  #hyderabad-preview .food-basket-lines { display: grid; gap: 12px; }
+  #hyderabad-preview .food-basket-line { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--food-line); }
+  #hyderabad-preview .food-basket-name { font-size: 12px; }
+  #hyderabad-preview .food-basket-price { color: var(--food-muted); font-size: 11px; }
+  #hyderabad-preview .food-quantity { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+  #hyderabad-preview .food-quantity button { width: 44px; background: transparent; border: 1px solid var(--food-line); border-radius: 5px; color: var(--food-ink); font-size: 16px; }
+  #hyderabad-preview .food-quantity span { min-width: 22px; text-align: center; }
+  #hyderabad-preview .food-subtotal { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; font-size: 13px; }
+  #hyderabad-preview .food-subtotal strong { font-size: 22px; font-weight: 600; }
+  #hyderabad-preview .food-preview-note { color: var(--food-muted); margin-top: 10px; font-size: 11px; }
+  #hyderabad-preview .food-footer { padding: 25px 36px 20px; border-top: 1px solid var(--food-line); }
+  #hyderabad-preview .food-footer-top { display: flex; justify-content: space-between; gap: 24px; }
+  #hyderabad-preview .food-footer-brand { font-family: Georgia, serif; font-size: 23px; letter-spacing: -.5px; }
+  #hyderabad-preview .food-footer p { color: var(--food-muted); font-size: 11px; margin-top: 4px; }
+  #hyderabad-preview .food-footer-outlet { text-align: right; font-size: 11px; }
+  #hyderabad-preview .food-footer-bottom { margin-top: 20px; display: flex; justify-content: space-between; gap: 20px; font-size: 11px; color: var(--food-muted); }
+  #hyderabad-preview button:disabled { opacity: .55; }
+  #hyderabad-preview .food-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  @media (max-width: 850px) {
+    #hyderabad-preview .food-nav { gap: 12px; }
+    #hyderabad-preview .food-nav .food-kitchens-link { display: none; }
+    #hyderabad-preview .food-header { gap: 17px; padding: 20px 24px; }
+    #hyderabad-preview .food-location { padding-left: 17px; }
+    #hyderabad-preview .food-hero { padding: 28px 24px; gap: 14px; }
+    #hyderabad-preview h1 { font-size: 51px; }
+    #hyderabad-preview .food-menu, #hyderabad-preview .food-footer, #hyderabad-preview .food-basket { padding-left: 24px; padding-right: 24px; }
+    #hyderabad-preview .food-values { padding-left: 24px; padding-right: 24px; }
+    #hyderabad-preview .food-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #hyderabad-preview .food-item-image { aspect-ratio: 1.9; }
+    #hyderabad-preview .food-description { font-size: 11px; }
+  }
+  @media (max-width: 580px) {
+    #hyderabad-preview .food-announcement { justify-content: center; padding: 8px 16px; font-size: 9px; }
+    #hyderabad-preview .food-announcement span:last-child { display: none; }
+    #hyderabad-preview .food-header { padding: 17px 18px 11px; gap: 14px; flex-wrap: wrap; min-height: 0; }
+    #hyderabad-preview .food-brand-name { font-size: 24px; }
+    #hyderabad-preview .food-brand-sub { font-size: 7px; }
+    #hyderabad-preview .food-mark { width: 34px; height: 38px; }
+    #hyderabad-preview .food-nav { margin-left: auto; }
+    #hyderabad-preview .food-nav a { display: none; }
+    #hyderabad-preview .food-location { border-left: 0; border-top: 1px solid var(--food-line); padding: 10px 0 0; order: 3; width: 100%; gap: 7px; }
+    #hyderabad-preview .food-location > div { display: flex; gap: 8px; align-items: center; }
+    #hyderabad-preview .food-location select { font-size: 16px; margin: 0; min-height: 44px; }
+    #hyderabad-preview .food-location label { font-size: 10px; }
+    #hyderabad-preview .food-hero { grid-template-columns: 1fr; padding: 25px 18px 22px; gap: 24px; }
+    #hyderabad-preview h1 { font-size: clamp(43px, 10.9vw, 62px); margin: 16px 0 14px; letter-spacing: -1.7px; }
+    #hyderabad-preview .food-intro { max-width: 100%; font-size: 12px; }
+    #hyderabad-preview .food-hero .food-primary { margin-top: 18px; }
+    #hyderabad-preview .food-small-note { margin-top: 12px; }
+    #hyderabad-preview .food-hero-art { aspect-ratio: 1.45; border-radius: 44% 44% 7px 7px; }
+      #hyderabad-preview .food-values { padding: 15px 18px; flex-wrap: wrap; gap: 12px 18px; font-size: 10px; }
+    #hyderabad-preview .food-value { gap: 6px; }
+    #hyderabad-preview .food-value:last-child { display: none; }
+    #hyderabad-preview .food-menu { padding: 25px 18px; }
+    #hyderabad-preview .food-menu-heading { display: block; }
+    #hyderabad-preview h2 { font-size: 29px; }
+    #hyderabad-preview .food-tax { margin-top: 8px; }
+    #hyderabad-preview .food-filters { gap: 6px; }
+    #hyderabad-preview .food-filter { padding: 8px 11px; }
+    #hyderabad-preview .food-filter-row { margin: 17px 0; gap: 4px; }
+    #hyderabad-preview .food-grid { gap: 12px; }
+    #hyderabad-preview .food-item-body { padding: 11px; }
+    #hyderabad-preview h3 { font-size: 13px; }
+    #hyderabad-preview .food-item-image { aspect-ratio: 1.1; }
+    #hyderabad-preview .food-item-bottom { align-items: stretch; flex-direction: column; gap: 9px; padding-top: 12px; }
+    #hyderabad-preview .food-add { justify-content: center; }
+    #hyderabad-preview .food-description { font-size: 11px; }
+    #hyderabad-preview .food-allergens { font-size: 11px; }
+    #hyderabad-preview .food-basket { padding: 22px 18px; }
+    #hyderabad-preview .food-basket-line { flex-wrap: wrap; }
+    #hyderabad-preview .food-footer { padding: 22px 18px; }
+    #hyderabad-preview .food-footer-top { flex-direction: column; gap: 15px; }
+    #hyderabad-preview .food-footer-outlet { text-align: left; }
+    #hyderabad-preview .food-footer-bottom { flex-direction: column; gap: 5px; }
+  }
+
+  #hyderabad-preview .food-hero-art img, #hyderabad-preview .food-item-image img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  #hyderabad-preview .food-hero-art::before {z-index:1;pointer-events:none;border-color:#ffffff50;}
+  #hyderabad-preview .food-hero-art img {object-position:center;}
+  #hyderabad-preview .food-art-label {z-index:2;}
+  #hyderabad-preview .food-photo-fallback {position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--food-muted);}
+  #hyderabad-preview .food-availability {position:absolute;top:10px;left:10px;background:var(--food-surface);color:var(--food-ink);padding:4px 8px;font-size:10px;border-radius:4px;}
+  #hyderabad-preview .food-item-bottom {flex-wrap:wrap;}
+  #hyderabad-preview .food-menu-stepper {display:flex;align-items:center;border:1px solid var(--food-line);border-radius:6px;background:var(--food-soft);max-width:100%;}
+  #hyderabad-preview .food-menu-stepper button {width:44px;flex:0 0 44px;background:transparent;border:0;color:var(--food-ink);font-size:17px;}
+  #hyderabad-preview .food-menu-stepper span {min-width:24px;text-align:center;font-size:13px;}
+  #hyderabad-preview .food-limit {font-size:11px;color:var(--food-muted);margin-top:7px;}
+  #hyderabad-preview .food-cart-summary {margin:0 36px 26px;padding:15px 18px;background:var(--food-soft);border:1px solid var(--food-line);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  #hyderabad-preview .food-cart-summary strong {display:block;font-size:15px;}
+  #hyderabad-preview .food-cart-summary span {display:block;font-size:11px;color:var(--food-muted);}
+  #hyderabad-preview .food-basket-item {display:flex;align-items:center;gap:12px;min-width:0;}
+  #hyderabad-preview .food-cart-photo {width:60px;height:60px;object-fit:cover;border-radius:7px;flex-shrink:0;}
+  @media(max-width:580px){#hyderabad-preview .food-cart-summary {margin:0 18px 20px;padding:12px;}#hyderabad-preview .food-cart-summary .food-primary{padding:12px;font-size:12px;}#hyderabad-preview .food-menu-stepper {justify-content:space-between;}}
+</style>
+</head>
+<body>
+
+<div id="hyderabad-preview" aria-label="Company A restaurant homepage theme">
+  <div class="food-announcement"><span>A TASTE OF HYDERABAD. STRAIGHT FROM OUR KITCHENS.</span><span>14 OUTLETS · ONE SHARED TABLE</span></div>
+  <header class="food-header">
+    <a class="food-brand cursor-interaction" href="#food-home" aria-label="Company A home"><span class="food-mark"><i data-lucide="cooking-pot" aria-hidden="true"></i></span><span><span class="food-brand-name">Company A</span><span class="food-brand-sub" style="display:block">HYDERABADI KITCHENS</span></span></a>
+    <div class="food-location"><i data-lucide="map-pin" aria-hidden="true"></i><div><label for="food-outlet">Your kitchen</label><select id="food-outlet" class="cursor-interaction"><option>Kondapur</option><option>Gachibowli</option><option>Kukatpally</option></select></div></div>
+    <nav class="food-nav" aria-label="Main navigation"><a href="#food-menu" class="cursor-interaction">Our menu</a><a href="#food-kitchens" class="food-kitchens-link cursor-interaction">Our kitchens</a><button class="food-cart-button cursor-interaction" id="food-cart-button" type="button" aria-expanded="false" aria-controls="food-basket"><i data-lucide="shopping-bag" aria-hidden="true"></i>Cart<span id="food-cart-count" class="food-count">0</span></button></nav>
+  </header>
+  <main id="food-home">
+    <section class="food-hero" aria-labelledby="food-title">
+      <div><div class="food-eyebrow">FROM HYDERABAD, WITH LOVE</div><h1 id="food-title">Good biryani.<br><em>Great company.</em></h1><p class="food-intro">Fragrant rice, a little spice, and something worth gathering around. Bring a taste of Hyderabad to your table.</p><a class="food-primary cursor-interaction" href="#food-menu">Explore the menu<i data-lucide="arrow-up-right" aria-hidden="true"></i></a><div class="food-small-note"><i data-lucide="cooking-pot" aria-hidden="true"></i>Order directly from your neighbourhood kitchen</div></div>
+      <div class="food-hero-art"><span class="food-photo-fallback">Loading photo…</span><img data-photo="chicken" alt="Chicken dum biryani" width="800" height="1200" fetchpriority="high"><div class="food-art-label">THE HYDERABADI CLASSIC<strong>Chicken dum biryani</strong></div></div>
+    </section>
+    <div class="food-values"><span class="food-value"><i data-lucide="cooking-pot" aria-hidden="true"></i>Hyderabadi favourites</span><span class="food-value"><i data-lucide="map-pin" aria-hidden="true"></i>Your local kitchen</span><span class="food-value"><i data-lucide="receipt-text" aria-hidden="true"></i>Clear, GST-inclusive prices</span></div>
+    <section class="food-menu" id="food-menu" aria-labelledby="food-menu-title">
+      <div class="food-menu-heading"><div><div class="food-menu-overline">PULL UP A CHAIR</div><h2 id="food-menu-title">What are you craving?</h2></div><p class="food-tax">Sample prices include 5% GST</p></div>
+      <div class="food-filter-row"><div class="food-filters" aria-label="Menu categories"><button type="button" class="food-filter cursor-interaction" data-category="all" aria-pressed="true">All dishes</button><button type="button" class="food-filter cursor-interaction" data-category="biryani" aria-pressed="false">Biryani</button><button type="button" class="food-filter cursor-interaction" data-category="sides" aria-pressed="false">Sides</button><button type="button" class="food-filter cursor-interaction" data-category="sweets" aria-pressed="false">Sweets</button></div><label class="food-veg-filter cursor-interaction"><input id="food-veg" type="checkbox">Vegetarian only</label></div>
+      <div class="food-grid" id="food-grid">
+        <article class="food-item" data-dish="chicken" data-type="biryani" data-vegetarian="false"><div class="food-item-image"><span class="food-photo-fallback">Loading photo…</span><img data-photo="chicken" alt="" width="960" height="720" loading="lazy"></div><div class="food-item-body"><div class="food-diet"><span class="food-diet-mark food-nonveg" aria-hidden="true"></span>Non-veg · Medium spice</div><h3>Chicken dum biryani</h3><p class="food-description">Saffron rice, tender chicken &amp; warming spices.</p><p class="food-allergens">Allergens: milk</p><div class="food-item-bottom"><div><div class="food-price">₹320</div><div class="food-portion">Regular · serves 1</div></div><button type="button" class="food-add cursor-interaction" data-add="chicken" aria-label="Add chicken dum biryani">Add <span aria-hidden="true">+</span></button></div></div></article>
+        <article class="food-item" data-dish="veg" data-type="biryani" data-vegetarian="true"><div class="food-item-image"><span class="food-photo-fallback">Loading photo…</span><img data-photo="veg" alt="" width="960" height="720" loading="lazy"></div><div class="food-item-body"><div class="food-diet"><span class="food-diet-mark" aria-hidden="true"></span>Veg · Medium spice</div><h3>Vegetable biryani</h3><p class="food-description">Aromatic basmati with colourful vegetables.</p><p class="food-allergens">Allergens: milk</p><div class="food-item-bottom"><div><div class="food-price">₹260</div><div class="food-portion">Regular · serves 1</div></div><button type="button" class="food-add cursor-interaction" data-add="veg" aria-label="Add vegetable biryani">Add <span aria-hidden="true">+</span></button></div></div></article>
+        <article class="food-item" data-dish="salan" data-type="sides" data-vegetarian="true"><div class="food-item-image"><span class="food-photo-fallback">Loading photo…</span><img data-photo="salan" alt="" width="960" height="720" loading="lazy"></div><div class="food-item-body"><div class="food-diet"><span class="food-diet-mark" aria-hidden="true"></span>Veg · Hot</div><h3>Mirchi ka salan</h3><p class="food-description">Green chillies in a rich, nutty gravy.</p><p class="food-allergens">Allergens: peanuts, sesame</p><div class="food-item-bottom"><div><div class="food-price">₹120</div><div class="food-portion">Regular · 200 ml</div></div><button type="button" class="food-add cursor-interaction" data-add="salan" aria-label="Add mirchi ka salan">Add <span aria-hidden="true">+</span></button></div></div></article>
+        <article class="food-item" data-dish="meetha" data-type="sweets" data-vegetarian="true"><div class="food-item-image"><span class="food-photo-fallback">Loading photo…</span><img data-photo="meetha" alt="" width="960" height="720" loading="lazy"></div><div class="food-item-body"><div class="food-diet"><span class="food-diet-mark" aria-hidden="true"></span>Veg · Sweet</div><h3>Double ka meetha</h3><p class="food-description">Golden bread, creamy milk &amp; a sweet finish.</p><p class="food-allergens">Allergens: wheat, milk, nuts</p><div class="food-item-bottom"><div><div class="food-price">₹140</div><div class="food-portion">Regular · serves 1</div></div><button type="button" class="food-add cursor-interaction" data-add="meetha" aria-label="Add double ka meetha">Add <span aria-hidden="true">+</span></button></div></div></article>
+      </div>
+      <div class="food-empty" id="food-empty" hidden><p>No dishes match these filters.</p><button type="button" class="food-primary cursor-interaction" id="food-reset-filters">Show all dishes</button></div>
+    </section>
+    <div class="food-cart-summary" id="food-cart-summary" hidden><div><strong id="food-summary-text"></strong><span>Includes 5% GST</span></div><button id="food-summary-button" type="button" class="food-primary cursor-interaction" aria-controls="food-basket" aria-expanded="false">View cart →</button></div>
+    <section class="food-basket" id="food-basket" hidden aria-labelledby="food-basket-title"><div class="food-basket-head"><h2 id="food-basket-title">A little something for you.</h2><button type="button" class="food-quiet cursor-interaction" id="food-close-cart">Close cart</button></div><div id="food-basket-lines" class="food-basket-lines"></div><div class="food-subtotal" id="food-subtotal"><span>Item subtotal <span style="display:block;font-size:10px;color:var(--food-muted)">Includes 5% GST</span></span><strong id="food-total">₹0</strong></div><p class="food-preview-note">Theme preview — cart interactions are local. Checkout will be part of the full website.</p></section>
+  </main>
+  <footer class="food-footer" id="food-kitchens"><div class="food-footer-top"><div><div class="food-footer-brand">Made for good company.</div><p>Hyderabadi food. Your neighbourhood kitchen.</p></div><div class="food-footer-outlet"><span id="food-footer-outlet">Kondapur kitchen · Hyderabad</span><p>FSSAI licence: placeholder for verified outlet number</p></div></div><div class="food-footer-bottom"><span>COMPANY A · WEBSITE THEME CONCEPT</span><span>Real food photographs · Sample menu &amp; availability</span></div></footer>
+  <div class="food-live" id="food-live" role="status" aria-live="polite"></div>
+</div>
+
+
+<script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script src="preview.js"></script>
+</body>
+</html>

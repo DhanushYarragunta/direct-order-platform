@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  KITCHEN
+  MANAGER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PLACED
+  PREPARING
+  READY
+  HANDED_OFF
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  role          Role      @default(CUSTOMER)
+  outletId      String?
+  outlet        Outlet?   @relation(fields: [outletId], references: [id])
+  consentAt     DateTime?
+  marketingOptIn Boolean  @default(false)
+  createdAt     DateTime  @default(now())
+  sessions      Session[]
+  orders        Order[]
+  audits        Audit[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+}
+
+model Outlet {
+  id            String @id
+  name          String
+  address       String
+  latitude      Float
+  longitude     Float
+  radiusKm      Float  @default(5)
+  minPrepMinutes Int   @default(25)
+  activeStations Int   @default(4)
+  fssai         String
+  open          Boolean @default(true)
+  updatedAt     DateTime @updatedAt
+  users         User[]
+  orders        Order[]
+  availability  Availability[]
+}
+
+model MenuItem {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  category    String
+  pricePaise  Int
+  familyPricePaise Int?
+  portion     String
+  vegetarian  Boolean
+  spice       String
+  allergens   String[]
+  photo       String?
+  prepMinutes Int
+  active      Boolean @default(true)
+  featured    Boolean @default(false)
+  updatedAt   DateTime @updatedAt
+  availability Availability[]
+  @@index([active, category])
+}
+
+model Availability {
+  outletId String
+  itemId   String
+  available Boolean @default(true)
+  updatedAt DateTime @updatedAt
+  outlet   Outlet @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  item     MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  @@id([outletId, itemId])
+}
+
+model AddOn {
+  id          String @id
+  name        String
+  pricePaise  Int
+  prepMinutes Int
+  allergens   String[]
+  active      Boolean @default(true)
+}
+
+model Order {
+  id           String @id @default(cuid())
+  number       String @unique
+  userId       String
+  user         User @relation(fields: [userId], references: [id])
+  outletId     String
+  outlet       Outlet @relation(fields: [outletId], references: [id])
+  checkoutKey  String
+  cartHash     String
+  status       OrderStatus @default(PENDING_PAYMENT)
+  paymentStatus PaymentStatus @default(PENDING)
+  totalPaise   Int
+  gstPaise     Int
+  workMinutes  Int
+  fulfillment  String
+  address      String
+  phone        String
+  note         String
+  promisedAt   DateTime?
+  originalPromisedAt DateTime?
+  estimateMinutes Int?
+  estimateFallback Boolean @default(false)
+  expiresAt    DateTime
+  readyAt      DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  version      Int @default(0)
+  lines        OrderLine[]
+  payments     Payment[]
+  messages     Message[]
+  audits       Audit[]
+  @@unique([userId, checkoutKey])
+  @@index([outletId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+}
+
+model OrderLine {
+  id          String @id @default(cuid())
+  orderId     String
+  order       Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId      String
+  name        String
+  photo       String?
+  portion     String
+  quantity    Int
+  unitPaise   Int
+  addOns      Json
+}
+
+model Payment {
+  id          String @id @default(cuid())
+  orderId     String
+  order       Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  attemptKey  String
+  method      String
+  status      PaymentStatus
+  amountPaise Int
+  resolveAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([orderId, attemptKey])
+  @@index([status, resolveAt])
+}
+
+model Message {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind      String
+  body      String
+  createdAt DateTime @default(now())
+  @@unique([orderId, kind])
+}
+
+model Audit {
+  id        String @id @default(cuid())
+  orderId   String?
+  order     Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User? @relation(fields: [actorId], references: [id])
+  action    String
+  detail    String
+  createdAt DateTime @default(now())
+}
+
+model RateLimit {
+  key       String @id
+  hits      Int @default(1)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
