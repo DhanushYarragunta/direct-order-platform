@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node --env-file=.env scripts/verify-core.mjs --e2e",
+    "test:performance": "node --env-file=.env scripts/verify-core.mjs --performance",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",

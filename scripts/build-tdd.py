@@ -2,6 +2,9 @@
 Run with a Python environment containing reportlab and Pillow after browser screenshots.
 """
 from pathlib import Path
+from datetime import datetime
+from io import BytesIO
+from zipfile import ZipFile, ZIP_DEFLATED
 import re
 from html import escape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image, Flowable
@@ -55,6 +58,10 @@ def inline(text):
 
 story=[]
 source=(ROOT/"docs/TECHNICAL_DESIGN.md").read_text()
+review_date = re.search(r"Review candidate \| (.*?) \|", source)
+if not review_date:
+    raise ValueError("The technical design must declare its review date.")
+footer_date = datetime.strptime(review_date.group(1), "%d %B %Y").strftime("%d %b %Y").upper()
 source=re.sub(r"(<!--.*?-->)", r"\n\n\1\n\n", source)
 for block in source.split("\n\n"):
     block=block.strip()
@@ -84,9 +91,23 @@ def page(canvas,doc):
     canvas.setFillColor(HexColor("#dfa923"));canvas.rect(0,h-8,w,8,fill=1,stroke=0)
     canvas.setStrokeColor(HexColor("#e1e5db"));canvas.line(54,44,w-54,44)
     canvas.setFillColor(HexColor("#747c6c"));canvas.setFont("Helvetica",8)
-    canvas.drawString(54,30,"DECCAN KITCHEN & CO.  /  TECHNICAL DESIGN  /  03 NOV 2026")
+    canvas.drawString(54,30,f"DECCAN KITCHEN & CO.  /  TECHNICAL DESIGN  /  {footer_date}")
     canvas.drawRightString(w-54,30,str(doc.page));canvas.restoreState()
 
 doc=SimpleDocTemplate(str(OUT),pagesize=(595.28,841.89),rightMargin=54,leftMargin=54,topMargin=40,bottomMargin=59,title="Deccan Kitchen & Co. - Technical Design",author="ISOCODELABS Project")
 doc.build(story,onFirstPage=page,onLaterPages=page)
 print(OUT)
+
+# Regenerate both submission files together so the ZIP cannot retain an older PDF.
+package = BytesIO()
+with ZipFile(package, "w", ZIP_DEFLATED) as archive:
+    archive.write(OUT, "Technical-Design.pdf")
+    archive.write(ROOT / "deployment.md", "deployment.md")
+with ZipFile(package) as archive:
+    assert archive.namelist() == ["Technical-Design.pdf", "deployment.md"]
+    assert archive.testzip() is None
+if package.getbuffer().nbytes > 25 * 1024 * 1024:
+    raise ValueError("The assessment ZIP exceeds the 25 MB limit.")
+submission = ROOT / "output/submission.zip"
+submission.write_bytes(package.getvalue())
+print(submission)

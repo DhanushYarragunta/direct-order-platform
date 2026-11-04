@@ -2,7 +2,11 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, appendFileSync, rmSync } from "node:fs";
+
+const performanceOnly = process.argv.includes("--performance");
+const logPath = performanceOnly ? ".local/performance.log" : ".local/verification.log";
+const reportPath = performanceOnly ? ".local/performance-verification.json" : ".local/core-verification.json";
 
 // Every integration/browser run gets a new database; never reset the working demo.
 const source = new URL(process.env.DATABASE_URL || "");
@@ -36,7 +40,11 @@ const report = {
   steps: [],
 };
 mkdirSync(".local", { recursive: true });
-writeFileSync(".local/verification.log", "");
+writeFileSync(logPath, "");
+if (performanceOnly) {
+  rmSync(".local/performance-throughput.json", { force: true });
+  rmSync(".local/performance-checkout.json", { force: true });
+}
 function run(label, args) {
   return new Promise((resolve, reject) => {
     console.log(`\n→ ${label}`);
@@ -46,11 +54,11 @@ function run(label, args) {
     });
     child.stdout.on("data", (data) => {
       process.stdout.write(data);
-      appendFileSync(".local/verification.log", data);
+      appendFileSync(logPath, data);
     });
     child.stderr.on("data", (data) => {
       process.stderr.write(data);
-      appendFileSync(".local/verification.log", data);
+      appendFileSync(logPath, data);
     });
     child.on("error", reject);
     child.on("exit", (code) => {
@@ -71,18 +79,26 @@ try {
     "tsx",
     "prisma/seed.ts",
   ]);
-  if (!process.argv.includes("--e2e"))
+  if (!performanceOnly && !process.argv.includes("--e2e"))
     await run("Database integration tests", [
       "node_modules/vitest/vitest.mjs",
       "run",
     ]);
-  if (!process.argv.includes("--integration"))
+  if (performanceOnly)
+    await run("Local synthetic throughput and automated mobile checkout timing", [
+      "node_modules/@playwright/test/cli.js",
+      "test",
+      "--config=playwright.performance.config.ts",
+    ]);
+  else if (!process.argv.includes("--integration"))
     await run("Browser tests and responsive screenshots", [
       "node_modules/@playwright/test/cli.js",
       "test",
     ]);
   report.passed = true;
-  console.log("\nCore verification passed. Screenshots: .local/screenshots/");
+  console.log(performanceOnly
+    ? "\nLocal performance checks passed. Evidence: .local/performance-*.json"
+    : "\nCore verification passed. Screenshots: .local/screenshots/");
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
@@ -95,7 +111,7 @@ try {
   await control.$disconnect();
   report.finishedAt = new Date().toISOString();
   writeFileSync(
-    ".local/core-verification.json",
+    reportPath,
     JSON.stringify(report, null, 2),
   );
 }

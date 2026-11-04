@@ -153,11 +153,15 @@ export function PaymentScreen({ id }: { id: string }) {
     [busy, setBusy] = useState(false),
     [paymentError, setPaymentError] = useState("");
   useEffect(() => {
-    if (order?.paymentStatus === "PAID") {
-      app.setCart([]);
+    if (order?.paymentStatus !== "PAID" || !app.cartReady) return;
+    let active = true;
+    void app.consumeCheckout(id).then((consumed) => {
+      if (!active) return;
+      if (!consumed) app.setToast("Payment confirmed. Please review your saved cart before ordering again.");
       router.replace(`/orders/${id}`);
-    }
-  }, [order?.paymentStatus, id, router]);
+    });
+    return () => { active = false; };
+  }, [order?.paymentStatus, app.cartReady, id, router]);
   const pending = order?.payments.some((p) => p.status === "PENDING");
   async function pay() {
     setBusy(true);

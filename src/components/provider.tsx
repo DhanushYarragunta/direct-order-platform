@@ -3,21 +3,28 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
+  type SetStateAction,
 } from "react";
 import { cartLineKey, type CartLine } from "@/lib/domain";
-import { cartLineSchema } from "@/lib/validation";
 import { request, useResource } from "@/lib/client";
 import type { MenuData, User } from "@/lib/types";
+import {
+  CART_STORAGE_KEY, CHECKOUT_STORAGE_KEY, CART_CONSUME_LOCK, cartSnapshotSchema,
+  pendingCheckoutsSchema, cartAfterEdit, cartAfterPayment, type CartSnapshot, type PendingCheckout,
+} from "@/lib/cart-checkout";
 
 function useStore(demoMode: boolean) {
   const [user, setUser] = useState<User | null>(null),
     [authReady, setAuthReady] = useState(false);
-  const [outletId, setOutletId] = useState("kondapur"),
-    [cart, setCart] = useState<CartLine[]>([]),
+  const [cartState, setCartState] = useState<CartSnapshot>({ outletId: "kondapur", cart: [] }),
     [hydrated, setHydrated] = useState(false);
+  const cartStateRef = useRef(cartState);
+  const { cart, outletId } = cartState;
   const [toast, setToast] = useState("");
+  const pendingCheckouts = useRef<PendingCheckout[]>([]);
   const menu = useResource<MenuData>(
     `/api/menu?outlet=${outletId}&account=${user?.id || "guest"}`,
     `/api/events?scope=menu&outlet=${outletId}`,
@@ -31,28 +38,81 @@ function useStore(demoMode: boolean) {
       setAuthReady(true);
     }
   };
+  function adoptCart(value: CartSnapshot) {
+    cartStateRef.current = value;
+    setCartState(value);
+  }
+  function saveCart(value: CartSnapshot) {
+    adoptCart(value);
+    try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(value)); } catch {}
+  }
+  function setCart(value: SetStateAction<CartLine[]>) {
+    const current = cartStateRef.current;
+    saveCart(cartAfterEdit(current, {
+      outletId: current.outletId,
+      cart: typeof value === "function" ? value(current.cart) : value,
+    }));
+  }
+  function setOutletId(value: string) {
+    const current = cartStateRef.current;
+    saveCart(cartAfterEdit(current, { cart: current.cart, outletId: value }));
+  }
   useEffect(() => {
     void refreshUser().catch(() => {});
+    let initial = cartStateRef.current;
     try {
-      const saved = JSON.parse(
-        localStorage.getItem("deccan-cart-v1") || "null",
-      );
-      if (saved) {
-        const parsed = cartLineSchema.array().max(30).safeParse(saved.cart);
-        if (parsed.success) setCart(parsed.data);
-        if (["kondapur", "gachibowli", "kukatpally"].includes(saved.outletId))
-          setOutletId(saved.outletId);
-      }
+      const saved = cartSnapshotSchema.safeParse(JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "null"));
+      if (saved.success) initial = saved.data;
     } catch {}
+    saveCart({ ...initial, generation: initial.generation || crypto.randomUUID() });
     setHydrated(true);
   }, []);
   useEffect(() => {
-    if (hydrated)
-      localStorage.setItem(
-        "deccan-cart-v1",
-        JSON.stringify({ cart, outletId }),
-      );
-  }, [cart, outletId, hydrated]);
+    const syncCart = (event: StorageEvent) => {
+      if (event.key !== CART_STORAGE_KEY || !event.newValue) return;
+      try {
+        const saved = cartSnapshotSchema.safeParse(JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "null"));
+        if (saved.success) adoptCart(saved.data);
+      } catch {}
+    };
+    window.addEventListener("storage", syncCart);
+    return () => window.removeEventListener("storage", syncCart);
+  }, []);
+  function readCheckouts() {
+    try {
+      const parsed = pendingCheckoutsSchema.safeParse(JSON.parse(localStorage.getItem(CHECKOUT_STORAGE_KEY) || "[]"));
+      if (parsed.success) pendingCheckouts.current = parsed.data;
+    } catch {}
+    return pendingCheckouts.current;
+  }
+  function saveCheckouts(checkouts: PendingCheckout[]) {
+    pendingCheckouts.current = checkouts;
+    try { localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(checkouts)); } catch {}
+  }
+  function rememberCheckout(orderId: string, snapshot: CartSnapshot) {
+    saveCheckouts([...readCheckouts().filter((entry) => entry.orderId !== orderId),
+      { orderId, snapshot: structuredClone(snapshot) }].slice(-20));
+  }
+  async function consumeCheckout(orderId: string) {
+    // Without cross-tab exclusion, preserve the cart for manual review.
+    if (!navigator.locks?.request) return false;
+    try {
+      return await navigator.locks.request(CART_CONSUME_LOCK, () => {
+        const checkouts = readCheckouts();
+        const submitted = checkouts.find((entry) => entry.orderId === orderId);
+        if (!submitted) return true;
+        saveCheckouts(checkouts.filter((entry) => entry.orderId !== orderId));
+        let current = cartStateRef.current;
+        // Another tab may have edited the cart while payment was processing.
+        try {
+          const saved = cartSnapshotSchema.safeParse(JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || "null"));
+          if (saved.success) current = saved.data;
+        } catch {}
+        saveCart(cartAfterPayment(current, submitted.snapshot));
+        return true;
+      });
+    } catch { return false; }
+  }
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 4500);
@@ -136,7 +196,11 @@ function useStore(demoMode: boolean) {
     outletId,
     setOutletId,
     cart,
+    cartGeneration: cartState.generation,
     setCart,
+    cartReady: hydrated,
+    rememberCheckout,
+    consumeCheckout,
     add,
     quantity,
     total,

@@ -50,6 +50,13 @@ export function CheckoutScreen() {
     return () => { active = false; };
   }, [quoteSignature, quoteRetry, !!app.menu.data]);
   if (!app.authReady || app.menu.loading) return <Loading />;
+  if (!app.menu.data)
+    return (
+      <div className="page narrow-page">
+        <ErrorNotice message={app.menu.error || "The menu could not be loaded. Your cart is saved."} retry={app.menu.refresh} />
+        <Link className="back-link" href="/">Back to menu</Link>
+      </div>
+    );
   if (!app.user)
     return (
       <div className="page">
@@ -99,7 +106,8 @@ export function CheckoutScreen() {
       redeemedPoints: quote.redeemedPoints,
       ...(fulfillment === "delivery" && position ? position : {}),
     };
-    const signature = JSON.stringify(values);
+    const submittedCart = { outletId: values.outletId, cart: values.lines, generation: app.cartGeneration };
+    const signature = JSON.stringify({ values, cartGeneration: submittedCart.generation });
     if (attempt.current.signature !== signature)
       attempt.current = { signature, key: crypto.randomUUID() };
     try {
@@ -107,6 +115,7 @@ export function CheckoutScreen() {
         ...values,
         checkoutKey: attempt.current.key,
       });
+      app.rememberCheckout(order.id, submittedCart);
       router.push(`/payment/${order.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -148,6 +157,7 @@ export function CheckoutScreen() {
       <p className="eyebrow">ONE STEP CLOSER</p>
       <h1>Let’s make it yours.</h1>
       <p className="page-description">A few details, and we’ll get cooking.</p>
+      {app.menu.error && <ErrorNotice message={app.menu.error} retry={app.menu.refresh} />}
       <div className="checkout-layout">
         <form className="checkout-form" onSubmit={submit}>
           <section className="panel">

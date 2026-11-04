@@ -21,8 +21,8 @@ export async function serializable<T>(
         timeout: 10000,
       });
     } catch (error) {
-      // ORM writes use P2034; explicit FOR UPDATE queries surface PostgreSQL's
-      // serialization/deadlock SQLSTATE through P2010 with the driver adapter.
+      // ORM writes use P2034; explicit queries use P2010. In Prisma 7's JS
+      // engine, COMMIT can instead throw the adapter's original error directly.
       const known = error instanceof Prisma.PrismaClientKnownRequestError;
       const adapter = known
         ? (error.meta?.driverAdapterError as
@@ -32,10 +32,18 @@ export async function serializable<T>(
       const sqlState = known
         ? String(error.meta?.code || adapter?.cause?.originalCode || "")
         : "";
+      const directCause =
+        error instanceof Error && error.name === "DriverAdapterError" &&
+        error.cause && typeof error.cause === "object"
+          ? error.cause as { kind?: unknown; originalCode?: unknown }
+          : undefined;
       const retryable =
-        known &&
-        (error.code === "P2034" ||
-          (error.code === "P2010" && ["40001", "40P01"].includes(sqlState)));
+        (known &&
+          (error.code === "P2034" ||
+            (error.code === "P2010" && ["40001", "40P01"].includes(sqlState)))) ||
+        (directCause?.kind === "TransactionWriteConflict" &&
+          typeof directCause.originalCode === "string" &&
+          ["40001", "40P01"].includes(directCause.originalCode));
       if (!retryable || attempt === 3) throw error;
       await delay(10 * 2 ** attempt + Math.floor(Math.random() * 10));
     }
