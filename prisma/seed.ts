@@ -1,6 +1,7 @@
 import { db } from "../src/lib/db";
 import { hashPassword } from "../src/lib/password";
 import { gstIncluded } from "../src/lib/domain";
+import { seedDepth } from "./seed-depth";
 
 async function seed() {
   if (process.env.DEMO_MODE !== "true" || !process.env.DEMO_PASSWORD)
@@ -265,6 +266,7 @@ async function seed() {
         status: sample.status,
         paymentStatus: "PAID",
         totalPaise,
+        subtotalPaise: totalPaise,
         gstPaise: gstIncluded(totalPaise),
         workMinutes: 40,
         fulfillment: "pickup",
@@ -272,6 +274,7 @@ async function seed() {
         phone: "9000000000",
         note: "Sample order from the client brief",
         createdAt: new Date(now - sample.age * 60000),
+        placedAt: new Date(now - sample.age * 60000),
         promisedAt,
         originalPromisedAt: promisedAt,
         estimateMinutes: sample.age + sample.promise,
@@ -295,9 +298,8 @@ async function seed() {
       },
     });
   }
-  console.log(
-    "Seed ready: 3 outlets, 4 active dishes, 6 demo accounts, and the 3 brief orders. Existing records were preserved.",
-  );
+  await seedDepth(passwordHash);
+  console.log("Seed ready: core sample orders, coupons, loyalty, repeat-customer history and party requests. Existing records were preserved.");
 }
 seed()
   .catch((e) => {

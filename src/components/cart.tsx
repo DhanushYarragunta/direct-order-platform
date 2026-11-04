@@ -4,8 +4,9 @@ import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
 import { cartLineKey, gstIncluded, money } from "@/lib/domain";
 import { useApp } from "./provider";
 import { Empty, FoodPhoto, Stepper } from "./ui";
+import type { RewardQuote } from "@/lib/reward-policy";
 
-export function Cart({ checkoutLink = true }: { checkoutLink?: boolean }) {
+export function Cart({ checkoutLink = true, quote }: { checkoutLink?: boolean; quote?: RewardQuote }) {
   const app = useApp(),
     count = app.cart.reduce((s, l) => s + l.quantity, 0);
   return (
@@ -89,11 +90,13 @@ export function Cart({ checkoutLink = true }: { checkoutLink?: boolean }) {
           <div className="cart-summary">
             <div>
               <span>Item total</span>
-              <span>{money(app.total)}</span>
+              <span>{money(quote?.subtotalPaise ?? app.total)}</span>
             </div>
+            {!!quote?.couponDiscountPaise && <div className="green"><span>{quote.couponCode}</span><span>−{money(quote.couponDiscountPaise)}</span></div>}
+            {!!quote?.redeemedPoints && <div className="green"><span>{quote.redeemedPoints} loyalty points</span><span>−{money(quote.redeemedPoints * 100)}</span></div>}
             <div className="muted">
               <span>GST included (5%)</span>
-              <span>{money(gstIncluded(app.total))}</span>
+              <span>{money(quote?.gstPaise ?? gstIncluded(app.total))}</span>
             </div>
             <div>
               <span>Pickup / demo delivery</span>
@@ -101,7 +104,7 @@ export function Cart({ checkoutLink = true }: { checkoutLink?: boolean }) {
             </div>
             <div className="grand-total">
               <strong>To pay</strong>
-              <strong>{money(app.total)}</strong>
+              <strong>{money(quote?.totalPaise ?? app.total)}</strong>
             </div>
           </div>
           {app.unavailable && (

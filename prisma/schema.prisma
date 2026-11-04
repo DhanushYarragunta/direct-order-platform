@@ -30,6 +30,13 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum CateringStatus {
+  REQUESTED
+  CONFIRMED
+  DECLINED
+  CANCELLED
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -44,6 +51,8 @@ model User {
   sessions      Session[]
   orders        Order[]
   audits        Audit[]
+  loyaltyEntries LoyaltyEntry[]
+  cateringRequests CateringRequest[]
 }
 
 model Session {
@@ -59,6 +68,7 @@ model Outlet {
   id            String @id
   name          String
   address       String
+  city          String @default("Hyderabad")
   latitude      Float
   longitude     Float
   radiusKm      Float  @default(5)
@@ -70,6 +80,7 @@ model Outlet {
   users         User[]
   orders        Order[]
   availability  Availability[]
+  cateringRequests CateringRequest[]
 }
 
 model MenuItem {
@@ -87,6 +98,10 @@ model MenuItem {
   prepMinutes Int
   active      Boolean @default(true)
   featured    Boolean @default(false)
+  menuDays    Int[] @default([])
+  menuStartMinute Int?
+  menuEndMinute Int?
+  cityPrices MenuCityPrice[]
   updatedAt   DateTime @updatedAt
   availability Availability[]
   @@index([active, category])
@@ -123,6 +138,10 @@ model Order {
   status       OrderStatus @default(PENDING_PAYMENT)
   paymentStatus PaymentStatus @default(PENDING)
   totalPaise   Int
+  subtotalPaise Int @default(0)
+  couponCode String?
+  couponDiscountPaise Int @default(0)
+  redeemedPoints Int @default(0)
   gstPaise     Int
   workMinutes  Int
   fulfillment  String
@@ -135,6 +154,7 @@ model Order {
   estimateFallback Boolean @default(false)
   expiresAt    DateTime
   readyAt      DateTime?
+  placedAt     DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   version      Int @default(0)
@@ -142,10 +162,75 @@ model Order {
   payments     Payment[]
   messages     Message[]
   audits       Audit[]
+  loyaltyEntries LoyaltyEntry[]
   @@unique([userId, checkoutKey])
   @@index([outletId, status, createdAt])
   @@index([userId, createdAt])
   @@index([status, expiresAt])
+  @@index([createdAt, outletId])
+}
+
+model MenuCityPrice {
+  itemId String
+  city String
+  pricePaise Int
+  familyPricePaise Int?
+  item MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  @@id([itemId, city])
+}
+
+model Coupon {
+  code String @id
+  description String
+  type String
+  value Int
+  minSubtotalPaise Int
+  maxDiscountPaise Int
+  firstOrderOnly Boolean @default(false)
+  active Boolean @default(true)
+  startsAt DateTime
+  expiresAt DateTime
+}
+
+model LoyaltyEntry {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  orderId String?
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind String
+  points Int
+  createdAt DateTime @default(now())
+  @@unique([orderId, kind])
+  @@index([userId, createdAt])
+}
+
+model CateringRequest {
+  id String @id @default(cuid())
+  number String @unique
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  outletId String
+  outlet Outlet @relation(fields: [outletId], references: [id])
+  requestKey String
+  requestHash String
+  eventAt DateTime
+  guestCount Int
+  occasion String
+  contactName String
+  phone String
+  address String
+  menuNotes String
+  budgetPaise Int?
+  status CateringStatus @default(REQUESTED)
+  managerNote String @default("")
+  respondedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  version Int @default(0)
+  @@unique([userId, requestKey])
+  @@index([outletId, status, eventAt])
+  @@index([userId, createdAt])
 }
 
 model OrderLine {

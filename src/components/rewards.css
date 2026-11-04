@@ -1,0 +1,20 @@
+.coupon-entry { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.coupon-entry input { flex: 1; min-width: 140px; width: auto; }
+.reward-toggle { display: flex !important; flex-direction: row !important; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--line, #e9e4db); border-radius: 12px; }
+.reward-toggle input { width: 20px; height: 20px; flex: 0 0 20px; accent-color: #a46612; }
+.reward-toggle span, .reward-toggle small { display: block; }
+.reward-toggle small { margin-top: 5px; }
+.reward-success { color: #32613e; font-size: 13px; }
+.rewards-wallet { margin: 24px 0; }
+.rewards-wallet-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.rewards-wallet h2 { margin-bottom: 6px; }
+.rewards-balance { font-size: 30px; font-weight: 700; color: #92611b; }
+.rewards-balance small { font-size: 13px; font-weight: 500; color: var(--muted); }
+.rewards-wallet summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+.reward-ledger { list-style: none; padding: 0; margin: 0; }
+.reward-ledger li { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line, #e9e4db); font-size: 13px; }
+.reward-ledger small { display: block; margin-top: 4px; color: var(--muted); }
+.reward-coupons { display: grid; gap: 8px; margin-top: 16px; font-size: 13px; }
+.reward-coupons p { margin: 0; }
+.reward-coupons strong { color: #92611b; }
+@media (max-width: 600px) { .coupon-entry .button { padding-inline: 12px; } }

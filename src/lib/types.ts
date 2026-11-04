@@ -1,6 +1,7 @@
 export type Outlet = {
   id: string;
   name: string;
+  city: string;
   address: string;
   latitude: number;
   longitude: number;
@@ -32,6 +33,14 @@ export type MenuItem = {
   active: boolean;
   featured: boolean;
   available: boolean;
+  inStock?: boolean;
+  menuDays?: number[];
+  menuStartMinute?: number | null;
+  menuEndMinute?: number | null;
+  cityPrices?: { city: string; pricePaise: number; familyPricePaise: number | null }[];
+  scheduleAvailable?: boolean;
+  scheduleLabel?: string | null;
+  unavailableReason?: string | null;
   availability?: { outletId: string; available: boolean }[];
 };
 export type AddOn = {
@@ -45,6 +54,7 @@ export type MenuData = {
   outlet: Outlet;
   items: MenuItem[];
   addOns: AddOn[];
+  suggestedItemIds: string[];
 };
 export type Order = {
   id: string;
@@ -54,6 +64,10 @@ export type Order = {
   outlet: Outlet;
   status: string;
   paymentStatus: string;
+  subtotalPaise: number;
+  couponCode: string | null;
+  couponDiscountPaise: number;
+  redeemedPoints: number;
   totalPaise: number;
   gstPaise: number;
   fulfillment: string;

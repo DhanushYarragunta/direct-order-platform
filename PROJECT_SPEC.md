@@ -1,6 +1,6 @@
 # PROJECT SPEC: Direct Ordering Platform for Company A (Hyderabad biryani chain)
 
-> Implementation checkpoint: this document preserves the broader proposal. See `docs/explanations/02-core-build.md` and `README.md` for the current core, explicit differences, and deferred features. `CLIENT_BRIEF.md` remains the source of truth.
+> Implementation checkpoint: this document preserves the broader proposal. See `docs/TECHNICAL_DESIGN.md`, `docs/REVIEW_GUIDE.md` and `README.md` for the completed local candidate, explicit differences, and production limits. `CLIENT_BRIEF.md` remains the source of truth.
 
 > Hand this whole file to the coding agent (Claude Code / Codex). Place it in the repo root as `PROJECT_SPEC.md`.
 > Items marked **[ASSUMPTION]** are not stated in the client brief. They must be listed in the Technical Design Document (TDD) under "Assumptions".

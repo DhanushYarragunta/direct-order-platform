@@ -1,6 +1,6 @@
 # Deccan Kitchen & Co.
 
-A Next.js restaurant ordering application for the Company A assessment. The name is a concept brand, not a claim about an existing restaurant. [CLIENT_BRIEF.md](CLIENT_BRIEF.md) is the source of truth; [PROJECT_SPEC.md](PROJECT_SPEC.md) preserves the earlier proposal. The first implementation checkpoint focuses on the brief’s core slice.
+A Next.js restaurant ordering application for the Company A assessment. The name is a concept brand, not a claim about an existing restaurant. [CLIENT_BRIEF.md](CLIENT_BRIEF.md) is the source of truth; [PROJECT_SPEC.md](PROJECT_SPEC.md) preserves the earlier proposal. The core and remaining product features are implemented for local review.
 
 ## Run locally
 
@@ -21,7 +21,7 @@ If npm reports unapproved setup scripts, review with `npm install-scripts ls`, t
 
 On `/login`, use the explicit demo buttons for **Customer**, **Admin**, **Manager**, or a selected kitchen. Registration and email/password sign-in also work. Demo accounts use fake `.example` addresses and the local `DEMO_PASSWORD` for password sign-in. The shortcuts and test gateway require `DEMO_MODE=true`.
 
-## First core checkpoint
+## Implemented features
 
 - Customer menu with the four supplied food photos, category/search/vegetarian filters, outlet selection, geolocation radius checks, portions, add-ons, and a persistent cart.
 - Checkout priced by the server in integer paise, including 5% GST. Unavailable items cannot be ordered.
@@ -29,7 +29,10 @@ On `/login`, use the explicit demo buttons for **Customer**, **Admin**, **Manage
 - Customer order history, live stage tracking, simulated messages, and printable receipt.
 - Central menu editor with the supplied photo library, prices, allergens, diet/spice labels, publication state, and outlet availability.
 - Kitchen tickets scoped to an outlet, preparation timers, stage actions, availability switches, and manager promise overrides.
-- A small operational overview backed by actual demo orders, with honest date/record limits.
+- Coupon validation, loyalty redemption with a transaction ledger, and rewards earned on handoff.
+- Party requests with minimum notice and outlet-scoped manager confirmation.
+- City price overrides, scheduled menus (including overnight service), and explicit history-based reorder suggestions.
+- Outlet reports over all matching orders, with 24-hour/7-day/30-day periods and clear repeat-customer definitions.
 - Database sessions, role checks, hashed passwords, bounded validated requests, audit events, and persistent background jobs.
 
 The palette and operational layout draw inspiration from [VedantManek16/Restaurant-POS-System](https://github.com/VedantManek16/Restaurant-POS-System). This is an independent Next.js implementation; it does not replace outlet billing or inventory. The customer menu uses a warm, light surface with a charcoal sidebar and amber accents. Radix provides modal focus behaviour, Lucide supplies icons, and custom CSS defines the interface. Tailwind is configured; this is not an imported shadcn template.
@@ -37,28 +40,30 @@ The palette and operational layout draw inspiration from [VedantManek16/Restaura
 ## Verify
 
 ```sh
-npm run check            # TypeScript, 20 domain tests, production build
+npm run check            # TypeScript, domain tests, production build
 npm run verify:core      # Working demo migration/seed + all checks + isolated DB/browser tests
 ```
 
-The full verification command creates a temporary database on the project-local PostgreSQL server and removes it afterwards. It runs 11 database integration cases plus four Playwright browser scenarios. It does not reset the working demo. Chrome is used when installed on macOS; elsewhere install Playwright Chromium with `npx playwright install chromium`. Port 3001 must be free. A production build is required before running `npm run test:e2e` alone.
+The full verification command creates a temporary database on the project-local PostgreSQL server and removes it afterwards. It runs 27 database integration cases plus nine Playwright browser scenarios, alongside 36 domain tests in the full check. It does not reset the working demo. Chrome is used when installed on macOS; elsewhere install Playwright Chromium with `npx playwright install chromium`. Port 3001 must be free. A production build is required before running `npm run test:e2e` alone.
 
 Results are written to `.local/core-verification.json` and `.local/verification.log`; browser screenshots are in `.local/screenshots/`. Playwright retains failure traces in `test-results/` and a report in `playwright-report/`. These are ignored by Git.
 
-## Boundaries and next checkpoint
+## Review and boundaries
 
 The preparation estimate is a **rules-based baseline**, not a trained AI model. SSE checks database revisions every three seconds, with a twelve-second full refresh fallback. Payments and messages are simulated. FSSAI values are conspicuous placeholders, not valid licences. Supplied images and source marks are retained; confirm image rights before publishing commercially.
 
-Coupons, loyalty, catering, time-based menus, city-specific prices, unrestricted image uploads, customer reorder suggestions, and production deployment are later work. Only Hyderabad prices and three sample outlets are implemented. The initial dashboard is an operational summary, not full analytics. No real delivery provider, WhatsApp/SMS gateway, or payment processor is connected. Load at 1,200 orders/hour has not been benchmarked.
+Three Hyderabad outlets and four photographed active dishes keep the demo compact. City pricing is configurable; other-city expansion is not claimed. Coupons are seeded policies, and photos use the supplied library rather than unrestricted uploads. Reports describe repeats within a chosen period, not retention cohorts. No real delivery provider, WhatsApp/SMS gateway, or payment processor is connected. Public deployment, 1,200 orders/hour load validation and checkout-time benchmarking remain production work.
+
+Start with [the review guide](docs/REVIEW_GUIDE.md), [the current technical design](docs/TECHNICAL_DESIGN.md), or the generated `output/pdf/technical-design.pdf`. The assessment ZIP at `output/submission.zip` contains exactly the PDF and `deployment.md`. The repository is [direct-order-platform](https://github.com/DhanushYarragunta/direct-order-platform).
 
 See [deployment.md](deployment.md) for hosting requirements and [the core implementation explanation](docs/explanations/02-core-build.md) for execution flow, tradeoffs, tests, and interview notes. Keep the earlier static `theme-preview/` as design history; the actual application is under `src/`.
 
 ## Git checkpoint
 
-The user makes commits and pushes. Review the app, run the checks, and inspect `git status` before committing. Suggested first message:
+The user makes commits and pushes. Review the app, run the checks, and inspect `git status` before committing. Suggested checkpoint message:
 
 ```text
-feat: build Next.js restaurant ordering core with menu CMS and live kitchen
+feat: complete rewards catering menu rules and outlet reporting
 ```
 
 Never add `.env`, `.local`, `node_modules`, `.next`, or test reports. Add the project’s GitHub URL and any deployed URL to the final assessment TDD after the repository is created. This README does not invent either URL.

@@ -1,0 +1,21 @@
+import { test, expect } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+test("outlet reporting works on desktop and mobile with scoped access", async ({ page }) => {
+  const login = await page.request.post("/api/auth/demo", { headers: { origin: "http://127.0.0.1:3001" }, data: { account: "admin" } });
+  expect(login.ok()).toBeTruthy();
+  await page.goto("/workspace");
+  await expect(page.getByRole("heading", { name: "Kitchen performance" })).toBeVisible();
+  await expect(page.locator(".report-panel tbody tr")).toHaveCount(3);
+  await page.getByLabel("Report period").selectOption("30");
+  await expect(page.getByText(/rolling 30-day window/)).toBeVisible();
+  mkdirSync(".local/screenshots", { recursive: true });
+  await page.screenshot({ path: ".local/screenshots/report-desktop.png", fullPage: true });
+  await page.getByLabel("Report outlet").selectOption("kondapur");
+  await expect(page.locator(".report-panel tbody tr")).toHaveCount(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.screenshot({ path: ".local/screenshots/report-mobile.png", fullPage: true });
+  await page.request.post("/api/auth/demo", { headers: { origin: "http://127.0.0.1:3001" }, data: { account: "manager" } });
+  expect((await page.request.get("/api/staff/analytics?outlet=all")).status()).toBe(403);
+  expect((await page.request.get("/api/staff/analytics?outlet=kukatpally")).status()).toBe(403);
+});

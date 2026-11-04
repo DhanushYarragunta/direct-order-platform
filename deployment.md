@@ -2,7 +2,9 @@
 
 ## Current state
 
-The project is a local Next.js application. No public deployment or project GitHub URL has been created by the agent. The GitHub repository linked in the user’s request is a design reference, not this application’s repository.
+Project repository: https://github.com/DhanushYarragunta/direct-order-platform
+
+The application is ready for local review. No public app deployment has been provisioned. The owner should commit and push the reviewed candidate before submitting; the existing remote may still show the earlier checkpoint.
 
 ## Local steps
 
@@ -11,7 +13,7 @@ The project is a local Next.js application. No public deployment or project GitH
 3. Run `npm run db:local`. This creates an isolated local cluster on loopback port 55432, a database, and an ignored `.env`. The helper uses the Homebrew ARM PostgreSQL path unless `POSTGRES_BIN` is supplied.
 4. Run `npm run db:generate`, `npm run db:migrate`, and `npm run db:seed`.
 5. Run `npm run dev` and visit `http://127.0.0.1:3000`. Do not interchange localhost and 127.0.0.1 without updating the application origin.
-6. Run `npm run verify:core` before the first commit. It includes integration tests in a separate temporary database, browser checks, and saved desktop/mobile screenshots. It starts a temporary server on port 3001 and shuts it down after the run.
+6. Run `npm run verify:core` before committing the review candidate. It includes integration tests in a separate temporary database, browser checks, and saved desktop/mobile screenshots. It starts a temporary server on port 3001 and shuts it down after the run.
 
 For an existing PostgreSQL instance, copy `.env.example` to `.env` and supply your own values instead of using `db:local`. The seed is non-destructive: existing items, users and orders are preserved. Repeated seeding does not change demo passwords or reset sample order times.
 
@@ -34,9 +36,9 @@ Open `/login` and choose one of the labelled demo accounts. No shared password n
 
 | Account | Access |
 | --- | --- |
-| Customer / `customer@deccan.example` | Ordering, payment, own history and tracking |
-| Admin / `admin@deccan.example` | Central menu manager, all outlet operations |
-| Manager / `manager@deccan.example` | Kondapur operations and promise overrides |
+| Customer / `customer@deccan.example` | Ordering, coupons/loyalty, own history/tracking and party requests |
+| Admin / `admin@deccan.example` | Central menu manager, city prices/schedules, all outlet operations/reports and party confirmations |
+| Manager / `manager@deccan.example` | Kondapur reports, kitchen/promise overrides and party confirmations |
 | Kondapur kitchen / `kondapur@deccan.example` | Kondapur kitchen tickets and availability |
 | Gachibowli kitchen / `gachibowli@deccan.example` | Gachibowli kitchen tickets and availability |
 | Kukatpally kitchen / `kukatpally@deccan.example` | Kukatpally kitchen tickets and availability |
@@ -51,4 +53,13 @@ SSE endpoints must permit streamed responses, disable proxy buffering, and allow
 
 Back up PostgreSQL, provide health monitoring, and verify session expiry, database recovery, and streaming behaviour on the chosen host. No platform, paid service, credentials, or deployment has been provisioned yet.
 
-Before a real launch, replace licence placeholders with verified FSSAI numbers, confirm photo rights and allergen declarations, implement real payments and delivery, set a retention/consent policy, remove demo data/shortcuts, and benchmark the expected peak. Those are production tasks beyond the first core checkpoint.
+Before a real launch, replace licence placeholders with verified FSSAI numbers, confirm photo rights and allergen declarations, implement real payments and delivery, set a retention/consent policy, remove demo data/shortcuts, and benchmark the expected peak. Those are production tasks beyond this local review candidate.
+
+## Review the extended features
+
+- Customer: order two regular biryanis, apply BIRYANI10, select loyalty points and pay. Cancel while the order is PLACED to verify points return. WELCOME100 requires a new registered customer; the existing demo customer has paid history.
+- Customer party orders: send a request at least 24 hours ahead. Sign in as Manager for Kondapur (or Admin for any outlet), open Party requests and confirm with details. The customer sees the response.
+- Menu manager: edit a dish, add a Hyderabad city override, or set serving days and hours in IST. The kitchen stock switch remains independent of the serving schedule.
+- Overview: compare kitchen rows and change the reporting period. Repeat customers means two paid orders within that period, not lifetime retention.
+
+The technical design PDF and this file are packaged in `output/submission.zip` (two files, under 25 MB). PDF source is `docs/TECHNICAL_DESIGN.md`; run `python scripts/build-tdd.py` with ReportLab and Pillow after browser verification to regenerate it.

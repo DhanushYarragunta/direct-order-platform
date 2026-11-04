@@ -10,6 +10,7 @@ import {
   LogOut,
   ArrowUpRight,
   MapPin,
+  CalendarHeart,
 } from "lucide-react";
 import { useApp } from "./provider";
 import { request } from "@/lib/client";
@@ -25,11 +26,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
         ...(app.user?.role === "ADMIN"
           ? [{ href: "/workspace/menu", label: "Menu manager", icon: BookOpen }]
           : []),
+        ...(["ADMIN", "MANAGER"].includes(app.user?.role || "")
+          ? [{ href: "/workspace/catering", label: "Party requests", icon: CalendarHeart }]
+          : []),
         { href: "/", label: "Customer menu", icon: UtensilsCrossed },
       ]
     : [
         { href: "/", label: "Our menu", icon: UtensilsCrossed },
         { href: "/orders", label: "My orders", icon: ReceiptText },
+        { href: "/catering", label: "Party orders", icon: CalendarHeart },
       ];
   return (
     <div className={`app-shell ${path === "/kitchen" ? "kitchen-shell" : ""}`}>
@@ -123,6 +128,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                       ? "Kitchen display"
                       : path.includes("workspace/menu")
                         ? "Menu manager"
+                        : path.includes("catering")
+                          ? "Party orders"
                         : path === "/workspace"
                           ? "Overview"
                           : path.includes("login")

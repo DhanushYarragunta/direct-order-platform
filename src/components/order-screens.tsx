@@ -19,6 +19,7 @@ import { money, STATUS_LABELS } from "@/lib/domain";
 import type { Order } from "@/lib/types";
 import { useApp } from "./provider";
 import { Empty, ErrorNotice, FoodPhoto, Loading } from "./ui";
+import { RewardsWallet } from "./rewards-wallet";
 
 export const time = (value: string) =>
   new Date(value).toLocaleTimeString("en-IN", {
@@ -67,6 +68,7 @@ export function OrdersScreen() {
         </Empty>
       ) : (
         <>
+          <RewardsWallet />
           {resource.error && (
             <ErrorNotice message={resource.error} retry={resource.refresh} />
           )}{" "}
@@ -203,12 +205,13 @@ export function PaymentScreen({ id }: { id: string }) {
           <ErrorNotice
             message={
               order.paymentStatus === "REFUNDED"
-                ? "An item became unavailable. The simulated payment was refunded. Return to the menu to start again."
+                ? order.messages.find((message) => message.kind === "REFUND")?.body || "Your simulated payment was refunded. Return to the menu to start again."
                 : "This checkout has expired. Start a new order from the menu."
             }
           />
         ) : (
           <>
+            {order.redeemedPoints > 0 && <p className="reward-success">{order.redeemedPoints} loyalty points are reserved for this order until payment or expiry. Failed attempts can be retried.</p>}
             <div className="payment-methods">
               {[
                 { name: "UPI", icon: Smartphone },
@@ -455,8 +458,10 @@ export function OrderScreen({ id }: { id: string }) {
           <div className="cart-summary">
             <div>
               <span>Item total</span>
-              <span>{money(order.totalPaise)}</span>
+              <span>{money(order.subtotalPaise || order.totalPaise)}</span>
             </div>
+            {order.couponDiscountPaise > 0 && <div className="green"><span>{order.couponCode}</span><span>−{money(order.couponDiscountPaise)}</span></div>}
+            {order.redeemedPoints > 0 && <div className="green"><span>{order.redeemedPoints} loyalty points</span><span>−{money(order.redeemedPoints * 100)}</span></div>}
             <div>
               <span>GST included (5%)</span>
               <span>{money(order.gstPaise)}</span>
@@ -472,6 +477,8 @@ export function OrderScreen({ id }: { id: string }) {
               (p) => p.status === "PAID" || p.status === "REFUNDED",
             )?.method || "Test gateway"}
           </p>
+          {order.status === "HANDED_OFF" && <p className="reward-success">You earned {Math.floor(order.totalPaise / 10000)} loyalty points. Thank you for ordering direct.</p>}
+          {order.status === "CANCELLED" && order.redeemedPoints > 0 && <p className="reward-success">Your {order.redeemedPoints} reserved points have been returned.</p>}
           {order.status === "PLACED" && (
             <>
               <button

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export class ApiError extends Error {
   constructor(
@@ -31,45 +31,39 @@ export function useResource<T>(url: string | null, stream?: string) {
   const [data, setData] = useState<T | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true);
-  const refresh = useCallback(async () => {
-    if (!url) return;
-    try {
-      const value = await request<T>(url);
-      setData(value);
-      setError("");
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [url]);
+  const loader = useRef<(() => Promise<void>) | null>(null);
+  const refresh = useCallback(async () => { await loader.current?.(); }, []);
   useEffect(() => {
-    let alive = true;
+    let alive = true, sequence = 0;
     setData(null);
     setLoading(true);
+    setError("");
     const load = async () => {
+      const requestSequence = ++sequence;
       if (!url) {
         setLoading(false);
         return;
       }
       try {
         const value = await request<T>(url);
-        if (alive) {
+        if (alive && requestSequence === sequence) {
           setData(value);
           setError("");
         }
       } catch (e) {
-        if (alive) setError((e as Error).message);
+        if (alive && requestSequence === sequence) setError((e as Error).message);
       } finally {
-        if (alive) setLoading(false);
+        if (alive && requestSequence === sequence) setLoading(false);
       }
     };
+    loader.current = load;
     void load();
     const interval = stream ? setInterval(() => void load(), 12000) : undefined;
     const source = stream ? new EventSource(stream) : undefined;
     if (source) source.onmessage = () => void load();
     return () => {
       alive = false;
+      loader.current = null;
       clearInterval(interval);
       source?.close();
     };

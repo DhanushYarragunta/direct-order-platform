@@ -19,7 +19,7 @@ function useStore(demoMode: boolean) {
     [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState("");
   const menu = useResource<MenuData>(
-    `/api/menu?outlet=${outletId}`,
+    `/api/menu?outlet=${outletId}&account=${user?.id || "guest"}`,
     `/api/events?scope=menu&outlet=${outletId}`,
   );
   const refreshUser = async () => {

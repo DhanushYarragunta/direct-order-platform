@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CATEGORIES, MAX_QUANTITY, PHOTOS } from "./domain";
+import { normalizeCity } from "./menu-context";
 
 export const cartLineSchema = z
   .object({
@@ -23,6 +24,8 @@ export const checkoutSchema = z
       .string()
       .regex(/^[6-9]\d{9}$/, "Enter a 10-digit Indian mobile number"),
     note: z.string().trim().max(250).default(""),
+    couponCode: z.string().trim().max(30).transform((v) => v.toUpperCase()).optional(),
+    redeemedPoints: z.number().int().min(0).max(100000).optional(),
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
   })
@@ -40,6 +43,12 @@ export const checkoutSchema = z
         path: ["address"],
       });
   });
+export const quoteSchema = z.object({
+  outletId: z.string().min(1).max(80),
+  lines: z.array(cartLineSchema).min(1).max(30),
+  couponCode: z.string().trim().max(30).transform((v) => v.toUpperCase()).optional(),
+  useLoyalty: z.boolean().optional(),
+}).strict();
 export const loginSchema = z
   .object({
     email: z
@@ -91,5 +100,24 @@ export const menuSchema = z
     prepMinutes: z.number().int().min(1).max(120),
     active: z.boolean(),
     featured: z.boolean(),
+    menuDays: z.array(z.number().int().min(0).max(6)).max(7)
+      .refine((days) => new Set(days).size === days.length, "Choose each day once").default([]),
+    menuStartMinute: z.number().int().min(0).max(1439).nullable().default(null),
+    menuEndMinute: z.number().int().min(0).max(1439).nullable().default(null),
+    cityPrices: z.array(z.object({
+      city: z.string().trim().min(2).max(60).transform(normalizeCity),
+      pricePaise: z.number().int().min(100).max(1000000),
+      familyPricePaise: z.number().int().min(100).max(1000000).nullable(),
+    }).strict()).max(30)
+      .refine((prices) => new Set(prices.map((price) => price.city)).size === prices.length, "Add each city only once")
+      .default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const hasStart = value.menuStartMinute !== null;
+    const hasEnd = value.menuEndMinute !== null;
+    if (hasStart !== hasEnd || (hasStart && !value.menuDays.length) || (!hasStart && value.menuDays.length))
+      context.addIssue({ code: "custom", path: ["menuDays"], message: "Choose start days and both times, or leave the schedule off" });
+    if (hasStart && value.menuStartMinute === value.menuEndMinute)
+      context.addIssue({ code: "custom", path: ["menuEndMinute"], message: "Opening and closing times must be different" });
+  });

@@ -8,11 +8,35 @@ import {
   canTransition,
   distanceKm,
   estimatePreparation,
-  gstIncluded,
   overridePromise,
 } from "./domain";
 import { checkoutSchema, paymentSchema } from "./validation";
 import { priceCart } from "./pricing";
+import { menuForOutlet, menuScheduleOpen } from "./menu-context";
+import { lockRewards, quoteRewards, releaseRewards, earnRewards, firstOrderEligible } from "./rewards";
+
+export async function priceCheckoutCart(
+  tx: Prisma.TransactionClient,
+  input: { outletId: string; lines: z.infer<typeof checkoutSchema>["lines"] },
+) {
+  const outlet = await tx.outlet.findUnique({ where: { id: input.outletId } });
+  if (!outlet?.open) throw new AppError(409, "This kitchen is currently closed");
+  const [items, extras] = await Promise.all([
+    tx.menuItem.findMany({
+      where: { id: { in: input.lines.map((l) => l.itemId) } },
+      include: { cityPrices: true, availability: { where: { outletId: outlet.id } } },
+    }),
+    tx.addOn.findMany(),
+  ]);
+  try {
+    return priceCart(input.lines, items.map((item) => {
+      const effective = menuForOutlet(item, outlet.city);
+      return { ...effective, available: item.availability[0]?.available === true && effective.scheduleAvailable };
+    }), extras);
+  } catch (error) {
+    throw new AppError(409, error instanceof Error ? error.message : "The menu changed. Please review your cart.");
+  }
+}
 
 export const orderInclude = {
   lines: true,
@@ -61,6 +85,14 @@ export async function checkout(
   if (found) return found;
   try {
     return await serializable(async (tx) => {
+      await lockRewards(tx, user.id);
+      const repeated = await tx.order.findUnique({ where: {
+        userId_checkoutKey: { userId: user.id, checkoutKey: input.checkoutKey },
+      } });
+      if (repeated) {
+        if (repeated.cartHash !== cartHash) throw new AppError(409, "This checkout changed. Please start a new checkout.");
+        return repeated;
+      }
       await tx.$queryRaw`SELECT "id" FROM "Outlet" WHERE "id"=${input.outletId} FOR UPDATE`;
       const outlet = await tx.outlet.findUnique({
         where: { id: input.outletId },
@@ -78,38 +110,21 @@ export async function checkout(
           400,
           "This address is outside the kitchen's delivery area",
         );
-      const items = await tx.menuItem.findMany({
-        where: { id: { in: input.lines.map((l) => l.itemId) } },
-        include: { availability: { where: { outletId: outlet.id } } },
-      });
-      const extras = await tx.addOn.findMany();
-      let priced;
-      try {
-        priced = priceCart(
-          input.lines,
-          items.map((i) => ({
-            ...i,
-            available: i.availability[0]?.available === true,
-          })),
-          extras,
-        );
-      } catch (error) {
-        throw new AppError(
-          409,
-          error instanceof Error
-            ? error.message
-            : "The menu changed. Please review your cart.",
-        );
-      }
-      return tx.order.create({
+      const priced = await priceCheckoutCart(tx, input);
+      const quote = await quoteRewards(tx, user.id, priced.totalPaise, input.couponCode, input.redeemedPoints);
+      const order = await tx.order.create({
         data: {
           number: `WEB-${Date.now().toString(36).toUpperCase()}-${randomBytes(2).toString("hex").toUpperCase()}`,
           userId: user.id,
           outletId: outlet.id,
           checkoutKey: input.checkoutKey,
           cartHash,
-          totalPaise: priced.totalPaise,
-          gstPaise: gstIncluded(priced.totalPaise),
+          subtotalPaise: priced.totalPaise,
+          couponCode: quote.couponCode,
+          couponDiscountPaise: quote.couponDiscountPaise,
+          redeemedPoints: quote.redeemedPoints,
+          totalPaise: quote.totalPaise,
+          gstPaise: quote.gstPaise,
           workMinutes: priced.workMinutes,
           fulfillment: input.fulfillment,
           address: input.address,
@@ -119,6 +134,11 @@ export async function checkout(
           lines: { create: priced.lines },
         },
       });
+      if (quote.redeemedPoints)
+        await tx.loyaltyEntry.create({ data: {
+          userId: user.id, orderId: order.id, kind: "REDEEM", points: -quote.redeemedPoints,
+        } });
+      return order;
     });
   } catch (error) {
     if (
@@ -148,12 +168,14 @@ async function settle(
   paymentId: string,
 ) {
   const order = await lockOrder(tx, id);
+  await lockRewards(tx, order.userId);
   if (order.status !== "PENDING_PAYMENT" || order.expiresAt < new Date()) {
     await tx.payment.updateMany({
       where: { id: paymentId, status: "PENDING" },
       data: { status: "FAILED", resolveAt: null },
     });
-    if (order.status === "PENDING_PAYMENT")
+    if (order.status === "PENDING_PAYMENT") {
+      await releaseRewards(tx, order);
       await tx.order.update({
         where: { id },
         data: {
@@ -162,6 +184,7 @@ async function settle(
           version: { increment: 1 },
         },
       });
+    }
     return tx.order.findUniqueOrThrow({ where: { id } });
   }
   await tx.$queryRaw`SELECT "id" FROM "Outlet" WHERE "id"=${order.outletId} FOR UPDATE`;
@@ -175,10 +198,13 @@ async function settle(
       (line) =>
         !items.some(
           (i) =>
-            i.id === line.itemId && i.active && i.availability[0]?.available,
+            i.id === line.itemId && i.active && i.availability[0]?.available && menuScheduleOpen(i),
         ),
     );
-  if (unavailable) {
+  const firstCoupon = order.couponCode ? await tx.coupon.findUnique({ where: { code: order.couponCode } }) : null;
+  const welcomeLost = firstCoupon?.firstOrderOnly && !(await firstOrderEligible(tx, order.userId, order.id));
+  if (unavailable || welcomeLost) {
+    await releaseRewards(tx, order);
     await tx.payment.update({
       where: { id: paymentId },
       data: { status: "REFUNDED", resolveAt: null },
@@ -187,7 +213,9 @@ async function settle(
       data: {
         orderId: id,
         kind: "REFUND",
-        body: "An item became unavailable. Your simulated payment has been refunded; no order was sent to the kitchen.",
+        body: welcomeLost
+          ? "Your first-order coupon is no longer eligible because another order was paid. Your simulated payment was refunded and reserved points returned."
+          : "An item became unavailable. Your simulated payment has been refunded and reserved points returned; no order was sent to the kitchen.",
       },
     });
     return tx.order.update({
@@ -233,6 +261,7 @@ async function settle(
     data: {
       status: "PLACED",
       paymentStatus: "PAID",
+      placedAt: new Date(),
       promisedAt,
       originalPromisedAt: promisedAt,
       estimateMinutes: estimate.minutes,
@@ -314,11 +343,14 @@ export async function advanceOrder(
       throw new AppError(409, "This order changed. Refresh and try again.");
     if (!canTransition(order.status, status))
       throw new AppError(409, "This order stage cannot be changed that way");
-    if (status === "CANCELLED")
+    if (status === "CANCELLED") {
+      await releaseRewards(tx, order);
       await tx.payment.updateMany({
         where: { orderId: id, status: "PAID" },
         data: { status: "REFUNDED" },
       });
+    }
+    if (status === "HANDED_OFF") await earnRewards(tx, order);
     await tx.message.create({
       data: {
         orderId: id,
@@ -419,6 +451,7 @@ export async function runOrderJobs() {
     await serializable(async (tx) => {
       const order = await lockOrder(tx, id);
       if (order.status !== "PENDING_PAYMENT") return;
+      await releaseRewards(tx, order);
       await tx.payment.updateMany({
         where: { orderId: id, status: "PENDING" },
         data: { status: "FAILED", resolveAt: null },

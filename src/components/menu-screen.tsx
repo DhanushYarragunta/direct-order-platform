@@ -17,6 +17,7 @@ import { CATEGORIES, chooseOutlet, money } from "@/lib/domain";
 import type { MenuItem } from "@/lib/types";
 import { useApp } from "./provider";
 import { Cart } from "./cart";
+import "./menu-depth.css";
 import {
   Diet,
   Empty,
@@ -33,7 +34,7 @@ export function MenuScreen() {
   const [query, setQuery] = useState(""),
     [category, setCategory] = useState("All dishes"),
     [veg, setVeg] = useState(false),
-    [selected, setSelected] = useState<MenuItem | null>(null),
+    [selectedId, setSelectedId] = useState<string | null>(null),
     [portion, setPortion] = useState<"regular" | "family">("regular"),
     [extras, setExtras] = useState<string[]>([]),
     [quantity, setQuantity] = useState(1),
@@ -48,7 +49,7 @@ export function MenuScreen() {
           .includes(query.toLowerCase()),
     ) || [];
   function customise(item: MenuItem) {
-    setSelected(item);
+    setSelectedId(item.id);
     setPortion("regular");
     setExtras([]);
     setQuantity(1);
@@ -82,9 +83,12 @@ export function MenuScreen() {
       { timeout: 10000 },
     );
   }
-  const selectedAvailable = data?.items.find(
-    (i) => i.id === selected?.id,
-  )?.available;
+  const selected = data?.items.find((item) => item.id === selectedId) || null;
+  const selectedAvailable = selected?.available && (portion !== "family" || selected.familyPricePaise !== null) && extras.every((id) => data?.addOns.some((extra) => extra.id === id));
+  const suggestions = app.user?.role === "CUSTOMER" ? (data?.suggestedItemIds || []).flatMap((id) => {
+    const item = data?.items.find((dish) => dish.id === id && dish.available);
+    return item ? [item] : [];
+  }) : [];
   return (
     <div className="page menu-page">
       <div className="page-intro">
@@ -166,6 +170,15 @@ export function MenuScreen() {
       </section>
       <div className="menu-layout">
         <section className="menu-content" id="menu">
+          {!!suggestions.length && <section className="reorder-section" aria-label="Order again suggestions">
+            <div className="section-heading"><div><h2>Your usual, made fresh.</h2><p>Favourites from your recent orders at {data?.outlet.name}. Choose a dish to review portions and extras.</p></div></div>
+            <div className="reorder-items">
+              {suggestions.map((item) => <div className="reorder-item" key={item.id}>
+                <strong><Diet veg={item.vegetarian} /> {item.name}</strong><span>{money(item.pricePaise)}</span>
+                <button className="add-button" aria-label={`Choose ${item.name} again`} onClick={() => customise(item)}>Choose <Plus size={15} /></button>
+              </div>)}
+            </div>
+          </section>}
           <div className="section-heading">
             <div>
               <p className="eyebrow">MADE FRESH, EVERY DAY</p>
@@ -232,7 +245,7 @@ export function MenuScreen() {
                       </span>
                     )}
                     {!item.available && (
-                      <span className="sold-out-badge">Sold out for now</span>
+                      <span className="sold-out-badge">{item.unavailableReason || "Sold out for now"}</span>
                     )}
                   </div>
                   <div className="dish-copy">
@@ -250,6 +263,7 @@ export function MenuScreen() {
                         ? `Contains ${item.allergens.join(", ")}`
                         : "No declared allergens"}
                     </div>
+                    {item.scheduleLabel && <div className="dish-schedule"><Clock3 size={13} />{item.scheduleLabel}</div>}
                     <div className="dish-bottom">
                       <div>
                         <strong>{money(item.pricePaise)}</strong>
@@ -261,7 +275,7 @@ export function MenuScreen() {
                         onClick={() => customise(item)}
                         aria-label={`Add ${item.name}`}
                       >
-                        {item.available ? "Add" : "Sold out"}
+                        {item.available ? "Add" : "Unavailable"}
                         {item.available && <Plus size={16} />}
                       </button>
                     </div>
@@ -312,7 +326,7 @@ export function MenuScreen() {
       )}
       <Modal
         open={!!selected}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedId(null)}
         title={selected?.name || "Make it yours"}
         description="Your meal, just how you like it."
       >
@@ -408,7 +422,7 @@ export function MenuScreen() {
                     portion,
                     addOnIds: extras,
                   });
-                  setSelected(null);
+                  setSelectedId(null);
                 }}
               >
                 {selectedAvailable

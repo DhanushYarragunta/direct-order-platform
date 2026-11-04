@@ -3,16 +3,12 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   ArrowRight,
-  ArrowUpRight,
   Check,
   ChefHat,
   Clock3,
-  IndianRupee,
-  ListChecks,
   Maximize2,
   RefreshCw,
   Settings2,
-  ShoppingBag,
   TriangleAlert,
 } from "lucide-react";
 import { request, useResource } from "@/lib/client";
@@ -20,7 +16,8 @@ import { money } from "@/lib/domain";
 import type { MenuData, Order, Outlet } from "@/lib/types";
 import { useApp } from "./provider";
 import { Diet, Empty, ErrorNotice, Loading, Modal } from "./ui";
-import { Status, time } from "./order-screens";
+import { time } from "./order-screens";
+import { AnalyticsScreen } from "./analytics-screen";
 
 type StaffData = { outlet: Outlet; outlets: Outlet[]; orders: Order[] };
 export function StaffGate({
@@ -101,187 +98,8 @@ function OutletSelect({
 export function WorkspaceScreen() {
   return (
     <StaffGate>
-      <Workspace />
+      <AnalyticsScreen />
     </StaffGate>
-  );
-}
-function Workspace() {
-  const app = useApp(),
-    r = useStaff(),
-    orders = r.data?.orders || [],
-    today = orders.filter(
-      (o) => new Date(o.createdAt).getTime() > Date.now() - 86400000,
-    ),
-    paid = today.filter((o) => o.paymentStatus === "PAID"),
-    ready = today.filter((o) => o.readyAt),
-    active = orders.filter((o) =>
-      ["PLACED", "PREPARING", "READY"].includes(o.status),
-    ),
-    avg = ready.length
-      ? Math.round(
-          ready.reduce(
-            (s, o) =>
-              s +
-              (new Date(o.readyAt!).getTime() -
-                new Date(o.createdAt).getTime()) /
-                60000,
-            0,
-          ) / ready.length,
-        )
-      : null;
-  return (
-    <div className="page">
-      <div className="page-intro">
-        <div>
-          <p className="eyebrow">A LITTLE CLARITY FOR A BUSY KITCHEN</p>
-          <h1>Welcome back, {app.user?.name.split(" ")[0]}.</h1>
-          <p>Here’s what’s happening at your kitchen.</p>
-        </div>
-        <OutletSelect
-          data={r.data}
-          value={r.outletId}
-          onChange={r.setSelected}
-        />
-      </div>
-      {r.error && <ErrorNotice message={r.error} retry={r.refresh} />}{" "}
-      {r.loading ? (
-        <Loading />
-      ) : (
-        <>
-          <div className="metric-grid">
-            {[
-              {
-                label: "Sales · last 24 hours",
-                value: money(paid.reduce((s, o) => s + o.totalPaise, 0)),
-                detail: "Paid orders, including GST",
-                icon: IndianRupee,
-              },
-              {
-                label: "Active orders",
-                value: active.length,
-                detail: "Received, preparing & ready",
-                icon: ShoppingBag,
-              },
-              {
-                label: "Average prep time",
-                value: avg === null ? "—" : `${avg} min`,
-                detail: ready.length
-                  ? `${ready.length} completed preparations`
-                  : "Waiting for completed orders",
-                icon: Clock3,
-              },
-              {
-                label: "Cancelled · last 24 hours",
-                value: today.filter((o) => o.status === "CANCELLED").length,
-                detail: "Includes expired checkouts",
-                icon: ListChecks,
-              },
-            ].map(({ label, value, detail, icon: Icon }) => (
-              <section className="metric-card" key={label}>
-                <div>
-                  <span>{label}</span>
-                  <Icon size={20} />
-                </div>
-                <strong>{value}</strong>
-                <small>{detail}</small>
-              </section>
-            ))}
-          </div>
-          <div className="workspace-banner">
-            <span className="workspace-banner-icon">
-              <ChefHat size={32} />
-            </span>
-            <div>
-              <p className="eyebrow">SERVICE, IN SYNC</p>
-              <h2>
-                {active.length
-                  ? `${active.length} orders. One focused kitchen.`
-                  : "Ready for the next good meal."}
-              </h2>
-              <p>
-                Live tickets, preparation timers, and a clear path to pickup.
-              </p>
-            </div>
-            <Link href="/kitchen" className="button primary">
-              Open kitchen display
-              <ArrowUpRight size={18} />
-            </Link>
-          </div>
-          <section className="panel">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">THE LATEST FROM YOUR KITCHEN</p>
-                <h2>Recent orders</h2>
-              </div>
-              <button className="button secondary" onClick={r.refresh}>
-                <RefreshCw size={15} /> Refresh
-              </button>
-            </div>
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Items</th>
-                    <th>Time</th>
-                    <th>Status</th>
-                    <th>Total</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.slice(0, 12).map((order) => (
-                    <tr key={order.id}>
-                      <td>
-                        <strong>{order.number}</strong>
-                        <small>{order.fulfillment}</small>
-                      </td>
-                      <td>
-                        {order.lines.reduce((s, l) => s + l.quantity, 0)} items
-                      </td>
-                      <td>{time(order.createdAt)}</td>
-                      <td>
-                        <Status status={order.status} />
-                      </td>
-                      <td>{money(order.totalPaise)}</td>
-                      <td>
-                        <Link
-                          className="icon-button"
-                          href={`/orders/${order.id}`}
-                          aria-label={`View ${order.number}`}
-                        >
-                          <ArrowUpRight size={18} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!orders.length && (
-              <Empty title="A fresh start">
-                <p>Confirmed customer orders will appear here.</p>
-              </Empty>
-            )}
-            <small className="table-note">
-              Shows up to 100 recent orders and active tickets. Metrics use the
-              last 24 hours in this view; simulated payments only.
-            </small>
-          </section>
-          {app.user?.role === "ADMIN" && (
-            <Link className="workspace-menu-link" href="/workspace/menu">
-              <span>
-                <strong>Keep the menu fresh</strong>
-                <small>
-                  Manage dishes, prices and availability across your kitchens.
-                </small>
-              </span>
-              <ArrowRight size={22} />
-            </Link>
-          )}
-        </>
-      )}
-    </div>
   );
 }
 
@@ -544,13 +362,15 @@ function Kitchen() {
             <div>
               <strong>{item.name}</strong>
               <small>
-                {item.available ? "Available to order" : "Sold out"}
+                {item.inStock
+                  ? item.available ? "In stock · available to order" : `In stock · ${item.unavailableReason?.toLowerCase() || "not taking orders"}`
+                  : "Out of stock"}
               </small>
             </div>
             <button
-              className={`switch ${item.available ? "on" : ""}`}
+              className={`switch ${item.inStock ? "on" : ""}`}
               role="switch"
-              aria-checked={item.available}
+              aria-checked={item.inStock === true}
               aria-label={`${item.name} availability`}
               disabled={busy === item.id}
               onClick={async () => {
@@ -559,7 +379,7 @@ function Kitchen() {
                   await request("/api/staff/availability", "PATCH", {
                     outletId: r.outletId,
                     itemId: item.id,
-                    available: !item.available,
+                    available: !item.inStock,
                   });
                   await stock.refresh();
                 } catch (e) {

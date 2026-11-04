@@ -1,0 +1,12 @@
+.report-controls { display: flex; gap: 12px; flex-wrap: wrap; }
+.report-controls label { display: grid; gap: 7px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.report-controls select { min-height: 44px; min-width: 160px; }
+.report-panel { margin-top: 24px; }
+.report-definition { color: var(--muted); font-size: 12px; line-height: 1.7; padding: 18px 24px; margin: 0; border-top: 1px solid var(--line); }
+.report-bars { padding: 4px 24px 24px; display: grid; gap: 16px; }
+.report-bar-row { display: grid; grid-template-columns: 68px minmax(0, 1fr) 82px; gap: 16px; align-items: center; font-size: 13px; }
+.report-bar-track { height: 12px; border-radius: 4px; background: #f6f1e7; overflow: hidden; }
+.report-bar-track > div { height: 100%; background: #dfa923; border-radius: 4px; min-width: 4px; }
+.report-bar-row strong { text-align: right; }
+.report-bar-row strong span { color: var(--muted); font-weight: 400; }
+@media (max-width: 640px) { .report-controls { width: 100%; } .report-controls label { flex: 1; min-width: 0; } .report-controls select { min-width: 0; width: 100%; } .report-bar-row { gap: 8px; grid-template-columns: 55px minmax(0, 1fr) 60px; } .report-definition { padding: 16px; } }

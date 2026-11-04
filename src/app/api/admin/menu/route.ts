@@ -7,7 +7,7 @@ export async function GET() {
     await requireUser(["ADMIN"]);
     return {
       items: await db.menuItem.findMany({
-        include: { availability: true },
+        include: { availability: true, cityPrices: { orderBy: { city: "asc" } } },
         orderBy: { name: "asc" },
       }),
       outlets: await db.outlet.findMany({ orderBy: { name: "asc" } }),
@@ -19,10 +19,12 @@ export async function POST(request: Request) {
     const user = await requireUser(["ADMIN"]),
       input = await body(request, menuSchema);
     return serializable(async (tx) => {
+      const { cityPrices, ...fields } = input;
       const outlets = await tx.outlet.findMany({ select: { id: true } });
       const item = await tx.menuItem.create({
         data: {
-          ...input,
+          ...fields,
+          cityPrices: { create: cityPrices },
           availability: { create: outlets.map((o) => ({ outletId: o.id })) },
         },
       });

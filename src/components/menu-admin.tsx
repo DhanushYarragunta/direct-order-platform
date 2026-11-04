@@ -1,12 +1,14 @@
 "use client";
 import { useState } from "react";
-import { Pencil, Plus, Search } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { request, useResource } from "@/lib/client";
 import { CATEGORIES, money, PHOTOS } from "@/lib/domain";
 import type { MenuItem, Outlet } from "@/lib/types";
 import { StaffGate } from "./staff-screens";
 import { Diet, Empty, ErrorNotice, FoodPhoto, Loading, Modal } from "./ui";
 import { useApp } from "./provider";
+import { MENU_DAYS, menuScheduleLabel, minuteTime } from "@/lib/menu-context";
+import "./menu-depth.css";
 
 type MenuAdminData = { items: MenuItem[]; outlets: Outlet[] };
 const blank = {
@@ -41,7 +43,10 @@ function MenuAdmin() {
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false),
     [busy, setBusy] = useState<string | null>(null),
-    [photo, setPhoto] = useState<string>("");
+    [photo, setPhoto] = useState<string>(""),
+    [scheduled, setScheduled] = useState(false),
+    [days, setDays] = useState<number[]>([]),
+    [cityPrices, setCityPrices] = useState<{ city: string; regular: string; family: string }[]>([]);
   const items =
     r.data?.items.filter((i) =>
       i.name.toLowerCase().includes(query.toLowerCase()),
@@ -49,6 +54,13 @@ function MenuAdmin() {
   function edit(item: MenuItem) {
     setEditing(item);
     setPhoto(item.photo || "");
+    setScheduled(item.menuStartMinute != null);
+    setDays(item.menuDays?.length ? item.menuDays : [0, 1, 2, 3, 4, 5, 6]);
+    setCityPrices((item.cityPrices || []).map((price) => ({
+      city: price.city,
+      regular: String(price.pricePaise / 100),
+      family: price.familyPricePaise === null ? "" : String(price.familyPricePaise / 100),
+    })));
     setError("");
   }
   async function save(e: React.FormEvent<HTMLFormElement>) {
@@ -58,6 +70,10 @@ function MenuAdmin() {
     setError("");
     const f = new FormData(e.currentTarget),
       family = String(f.get("family") || "");
+    const minutes = (name: string) => {
+      const [hour, minute] = String(f.get(name)).split(":").map(Number);
+      return hour * 60 + minute;
+    };
     const input = {
       name: f.get("name"),
       description: f.get("description"),
@@ -75,6 +91,14 @@ function MenuAdmin() {
       prepMinutes: Number(f.get("prep")),
       active: f.get("active") === "on",
       featured: f.get("featured") === "on",
+      menuDays: scheduled ? days : [],
+      menuStartMinute: scheduled ? minutes("menuStart") : null,
+      menuEndMinute: scheduled ? minutes("menuEnd") : null,
+      cityPrices: cityPrices.map((price) => ({
+        city: price.city,
+        pricePaise: Math.round(Number(price.regular) * 100),
+        familyPricePaise: price.family ? Math.round(Number(price.family) * 100) : null,
+      })),
     };
     try {
       await request(
@@ -113,7 +137,7 @@ function MenuAdmin() {
         <span>
           <strong>{r.data?.outlets.length || 0}</strong> connected kitchens
         </span>
-        <span>Hyderabad pricing · 5% GST included</span>
+        <span>City prices & serving hours · 5% GST included</span>
       </div>
       <section className="panel">
         <div className="section-heading">
@@ -168,6 +192,7 @@ function MenuAdmin() {
                           ? `${money(item.familyPricePaise)} family`
                           : item.portion}
                       </small>
+                      {!!item.cityPrices?.length && <small>{item.cityPrices.length} city override{item.cityPrices.length === 1 ? "" : "s"}</small>}
                     </td>
                     <td>
                       <span
@@ -175,6 +200,7 @@ function MenuAdmin() {
                       >
                         {item.active ? "Published" : "Hidden"}
                       </span>
+                      {menuScheduleLabel(item) && <small className="schedule-table-note">{menuScheduleLabel(item)}</small>}
                     </td>
                     {r.data?.outlets.map((outlet) => {
                       const available =
@@ -313,6 +339,48 @@ function MenuAdmin() {
                 />
               </label>
             </div>
+            <fieldset className="menu-settings">
+              <legend>City prices</legend>
+              <p>The prices above apply by default. Add an override for a city; an empty family price keeps the default family price.</p>
+              {cityPrices.map((price, index) => (
+                <div className="city-price-row" key={index}>
+                  <label className="city-name-field">
+                    City
+                    <input aria-label={`City ${index + 1}`} required minLength={2} maxLength={60} list="menu-cities" value={price.city}
+                      onChange={(event) => setCityPrices((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, city: event.target.value } : row))} />
+                  </label>
+                  <label>
+                    Regular (₹)
+                    <input aria-label={`City ${index + 1} regular price`} type="number" required min={1} max={10000} step="0.01" value={price.regular}
+                      onChange={(event) => setCityPrices((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, regular: event.target.value } : row))} />
+                  </label>
+                  <label>
+                    Family (₹, optional)
+                    <input aria-label={`City ${index + 1} family price`} type="number" min={1} max={10000} step="0.01" value={price.family}
+                      onChange={(event) => setCityPrices((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, family: event.target.value } : row))} />
+                  </label>
+                  <button type="button" className="icon-button" aria-label={`Remove city price ${index + 1}`} onClick={() => setCityPrices((current) => current.filter((_, rowIndex) => rowIndex !== index))}><Trash2 size={17} /></button>
+                </div>
+              ))}
+              <datalist id="menu-cities">{Array.from(new Set(r.data?.outlets.map((outlet) => outlet.city) || [])).map((city) => <option key={city} value={city} />)}</datalist>
+              <button type="button" className="button secondary" disabled={cityPrices.length >= 30} onClick={() => setCityPrices((current) => [...current, { city: "", regular: "", family: "" }])}><Plus size={16} /> Add city price</button>
+            </fieldset>
+            <fieldset className="menu-settings">
+              <legend>Serving hours</legend>
+              <label className="check-label"><input type="checkbox" checked={scheduled} onChange={(event) => setScheduled(event.target.checked)} /> Serve during selected hours</label>
+              <p>{scheduled ? "Times use India Standard Time. For an overnight window, select the day service starts." : "Available all day when the dish and outlet are open."}</p>
+              {scheduled && <>
+                <div className="schedule-days" role="group" aria-label="Serving start days">
+                  {MENU_DAYS.map((day, index) => <label className={days.includes(index) ? "selected" : ""} key={day}>
+                    <input type="checkbox" aria-label={day} checked={days.includes(index)} onChange={(event) => setDays((current) => event.target.checked ? [...current, index].sort() : current.filter((value) => value !== index))} />{day}
+                  </label>)}
+                </div>
+                <div className="form-two">
+                  <label>Service starts<input type="time" name="menuStart" required defaultValue={minuteTime(editing.menuStartMinute ?? 18 * 60)} /></label>
+                  <label>Service ends<input type="time" name="menuEnd" required defaultValue={minuteTime(editing.menuEndMinute ?? 23 * 60)} /></label>
+                </div>
+              </>}
+            </fieldset>
             <label>
               Portion label
               <input

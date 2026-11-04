@@ -13,12 +13,16 @@ export async function PATCH(
     return serializable(async (tx) => {
       if (!(await tx.menuItem.findUnique({ where: { id } })))
         throw new AppError(404, "Dish not found");
-      const item = await tx.menuItem.update({ where: { id }, data: input });
+      const { cityPrices, ...fields } = input;
+      const item = await tx.menuItem.update({
+        where: { id },
+        data: { ...fields, cityPrices: { deleteMany: {}, create: cityPrices } },
+      });
       await tx.audit.create({
         data: {
           actorId: user.id,
           action: "MENU_UPDATE",
-          detail: `${item.name}: price ${item.pricePaise} paise, active ${item.active}`,
+          detail: `${item.name}: base price ${item.pricePaise} paise, ${cityPrices.length} city overrides, schedule ${item.menuStartMinute === null ? "all day" : `${item.menuDays.join(",")} ${item.menuStartMinute}–${item.menuEndMinute} IST`}, active ${item.active}`,
         },
       });
       return item;
