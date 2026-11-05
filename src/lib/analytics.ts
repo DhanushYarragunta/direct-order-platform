@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { AppError, staffOutlet, type AuthUser } from "./auth";
 import { db } from "./db";
+import { getBusinessTargets, type BusinessTargets } from "./business-targets";
 
 export type Metrics = {
   orders: number;
@@ -22,6 +23,7 @@ export type AnalyticsData = {
   outlets: { id: string; name: string }[];
   byOutlet: (Metrics & { id: string; name: string })[];
   daily: { date: string; orders: number; revenuePaise: number }[];
+  targets: BusinessTargets;
 };
 
 const empty: Metrics = {
@@ -62,7 +64,7 @@ export async function getAnalytics(user: AuthUser, selected: string | null, days
         COALESCE(SUM("totalPaise") FILTER (WHERE "paymentStatus" = 'PAID'), 0)::float8 AS "revenuePaise",
         COUNT(*) FILTER (WHERE status = 'CANCELLED' AND "paymentStatus" = 'REFUNDED')::int AS cancelled,
         COUNT(*) FILTER (WHERE status = 'CANCELLED' AND "paymentStatus" <> 'REFUNDED')::int AS expired,
-        COUNT(*) FILTER (WHERE status IN ('PLACED', 'PREPARING', 'READY'))::int AS active,
+        COUNT(*) FILTER (WHERE status IN ('PLACED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY') OR (status = 'HANDED_OFF' AND fulfillment = 'delivery'))::int AS active,
         COUNT(*) FILTER (WHERE "readyAt" IS NOT NULL AND "placedAt" IS NOT NULL)::int AS prepared,
         ROUND(AVG(EXTRACT(EPOCH FROM ("readyAt" - "placedAt")) / 60) FILTER (WHERE "readyAt" >= "placedAt"))::float8 AS "averagePrepMinutes",
         COUNT(DISTINCT "userId") FILTER (WHERE "paymentStatus" = 'PAID')::int AS customers,
@@ -85,5 +87,6 @@ export async function getAnalytics(user: AuthUser, selected: string | null, days
     outlets,
     byOutlet: outlets.filter(o => !outletId || o.id === outletId).map(o => ({ ...empty, ...metrics.find(row => row.outletId === o.id), ...o })),
     daily,
+    targets: await getBusinessTargets(outletId, since, now),
   };
 }

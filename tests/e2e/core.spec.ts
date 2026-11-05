@@ -29,7 +29,7 @@ test("responsive real-photo menu and working filters", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Chicken dum biryani", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".dish-card")).toHaveCount(4);
+  await expect(page.locator(".dish-card")).toHaveCount(7);
   expect(
     await page
       .locator(".dish-image img")
@@ -43,7 +43,7 @@ test("responsive real-photo menu and working filters", async ({ page }) => {
   ).toBeTruthy();
   await screenshot(page, "menu-desktop");
   await page.getByLabel("Veg only").check();
-  await expect(page.locator(".dish-card")).toHaveCount(3);
+  await expect(page.locator(".dish-card")).toHaveCount(5);
   await page.getByLabel("Search dishes").fill("salan");
   await expect(page.locator(".dish-card")).toHaveCount(1);
   await page.getByLabel("Search dishes").fill("nothingmatches");
@@ -133,7 +133,7 @@ test("menu CMS and outlet stock changes reach the customer menu", async ({
   await expect(
     manager.getByRole("heading", { name: "A menu worth coming back for." }),
   ).toBeVisible();
-  await expect(manager.locator(".admin-dish")).toHaveCount(5);
+  await expect(manager.locator(".admin-dish")).toHaveCount(7);
   await screenshot(manager, "menu-manager");
   await manager
     .getByRole("button", { name: "Edit Chicken dum biryani" })

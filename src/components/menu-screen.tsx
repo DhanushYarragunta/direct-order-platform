@@ -18,6 +18,7 @@ import type { MenuItem } from "@/lib/types";
 import { useApp } from "./provider";
 import { Cart } from "./cart";
 import "./menu-depth.css";
+import "./customer-quality.css";
 import {
   Diet,
   Empty,
@@ -306,9 +307,10 @@ export function MenuScreen() {
               <strong>{data?.outlet.name || "Your kitchen"}</strong>
               <p>{data?.outlet.address}</p>
               <small>
-                Delivery within {data?.outlet.radiusKm || 5} km · FSSAI:{" "}
+                Delivery within {data?.outlet.radiusKm || 5} km · {data?.outlet.fssaiVerified ? "FSSAI licence:" : "Demo FSSAI number (not a licence):"}{" "}
                 {data?.outlet.fssai || "Loading"}
               </small>
+              <small><a href="/photo-credits">Photo credits · sample presentation</a></small>
             </div>
           </div>
         </section>

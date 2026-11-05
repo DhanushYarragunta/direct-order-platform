@@ -1,4 +1,12 @@
 .report-controls { display: flex; gap: 12px; flex-wrap: wrap; }
+.target-copy, .target-demo { padding: 16px 24px; margin: 0; font-size: 15px; line-height: 1.65; color: #283b32; }
+.target-copy p { margin: 8px 0 16px; }
+.target-demo { background: #fff2d6; color: #5b3900; }
+.target-baseline-form { padding: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.target-baseline-form h3, .target-baseline-form .error-notice { grid-column: 1 / -1; }
+.target-baseline-form label { display: grid; gap: 8px; font-size: 14px; }
+.business-targets table { font-size: 14px; }
+@media (max-width: 640px) { .target-baseline-form { grid-template-columns: 1fr; } .target-copy, .target-demo { padding: 16px; } }
 .report-controls label { display: grid; gap: 7px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .report-controls select { min-height: 44px; min-width: 160px; }
 .report-panel { margin-top: 24px; }

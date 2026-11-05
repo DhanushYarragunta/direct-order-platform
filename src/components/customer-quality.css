@@ -1,0 +1,44 @@
+/* Readable disclosures and a menu-first mobile layout, overriding compact theme sizes. */
+.menu-page .dish-copy .allergens, .modal .allergens { font-size: 14px; line-height: 1.55; color: #273d30; white-space: normal; }
+.menu-page .dish-copy > p { font-size: 14px; line-height: 1.55; color: #435148; }
+.menu-page .dish-meta { font-size: 12px; }
+.menu-page .dish-meta .spice, .menu-page .dish-bottom small { font-size: 12px; color: #435148; }
+.menu-page .dish-bottom strong { font-size: 21px; }
+.menu-page .dish-copy h3 { font-size: 21px; }
+.menu-page .dish-bottom { align-items: end; gap: 12px; }
+.menu-page .add-button, .menu-page .category-tabs button { min-height: 44px; font-size: 14px; }
+.menu-page .dish-copy { padding: 20px; }
+.menu-page .kitchen-info small { display: block; font-size: 14px; line-height: 1.6; color: #435148; }
+.menu-page .inclusive-note, .menu-page .count-label { font-size: 13px; }
+.menu-page .dish-badge, .menu-page .sold-out-badge { font-size: 12px; }
+@media (max-width: 760px) {
+  .menu-page .hero { display: none; }
+  .menu-page .page-intro { margin-bottom: 16px; }
+  .menu-page .page-intro > div:first-child > .eyebrow, .menu-page .page-intro > div:first-child > p:last-child { display: none; }
+  .menu-page .page-intro h1 { font-size: 25px; line-height: 1.2; }
+  .menu-page .menu-layout { margin-top: 0; }
+  .menu-page .menu-content > .section-heading { padding: 12px 0; }
+  .menu-page .menu-content > .section-heading .eyebrow { display: none; }
+  .menu-page .menu-controls { gap: 10px; margin: 8px 0; }
+  .menu-page .search-field input { font-size: 16px; }
+  .menu-page .category-tabs { margin: 10px 0 14px; padding-bottom: 4px; }
+  .menu-page .menu-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .menu-page .dish-card { display: grid; grid-template-columns: 104px minmax(0, 1fr); border: 1px solid #d4dace; }
+  .menu-page .dish-image { width: 104px; height: 136px; min-height: 136px; margin: 16px 0 0 12px; border-radius: 8px; overflow: hidden; }
+  .menu-page .dish-badge { display: none; }
+  .menu-page .dish-copy { padding: 16px 14px 16px 22px; min-width: 0; }
+  .menu-page .dish-copy h3 { font-size: 19px; line-height: 1.3; }
+  .menu-page .dish-copy > p { display: block; -webkit-line-clamp: unset; font-size: 14px; margin: 8px 0; }
+  .menu-page .dish-meta { flex-wrap: wrap; font-size: 10px; gap: 6px; }
+  .menu-page .dish-meta .spice { font-size: 12px; }
+  .menu-page .dish-bottom { flex-wrap: wrap; margin-top: 12px; }
+  .menu-page .dish-bottom small { white-space: normal; }
+  .menu-page .reorder-section { display: none; }
+  .menu-page .kitchen-picker select { font-size: 16px; min-height: 44px; }
+  .menu-page .kitchen-picker label { font-size: 12px; }
+}
+@media (max-width: 360px) {
+  .menu-page .dish-card { grid-template-columns: 82px minmax(0, 1fr); }
+  .menu-page .dish-image { width: 80px; height: 108px; min-height: 108px; margin-left: 8px; }
+  .menu-page .dish-copy { padding-left: 18px; }
+}

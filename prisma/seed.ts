@@ -34,17 +34,21 @@ async function seed() {
       minPrepMinutes: 30,
     },
   ];
-  for (const outlet of outlets)
+  for (const [index, outlet] of outlets.entries()) {
+    const fssai = `0000000000000${index + 1}`;
     await db.outlet.upsert({
       where: { id: outlet.id },
       update: {},
       create: {
         ...outlet,
-        fssai: "DEMO — licence pending verification",
+        fssai,
+        fssaiVerified: false,
         radiusKm: 5,
         activeStations: 4,
       },
     });
+    await db.outlet.updateMany({ where: { id: outlet.id, fssai: "DEMO — licence pending verification" }, data: { fssai, fssaiVerified: false } });
+  }
   const menu = [
     {
       id: "chicken-biryani",
@@ -118,20 +122,34 @@ async function seed() {
       id: "mutton-haleem",
       name: "Mutton haleem",
       description:
-        "Slow-cooked mutton and wheat. Seasonal sample dish, currently off the menu.",
+        "Slow-cooked mutton and wheat with fragrant spices, herbs and golden onions.",
       category: "Sides",
       pricePaise: 35000,
       familyPricePaise: null,
       portion: "Regular",
       vegetarian: false,
       spice: "Medium",
-      allergens: ["wheat", "milk"],
-      photo: null,
+      allergens: ["wheat", "milk", "egg"],
+      photo: "/food/mutton-haleem.jpg",
       prepMinutes: 20,
       featured: false,
-      active: false,
+      active: true,
+    },
+    {
+      id: "cucumber-raita", name: "Cucumber raita", description: "Cool yoghurt, crisp cucumber and roasted cumin. A refreshing side for your biryani.",
+      category: "Sides", pricePaise: 8000, familyPricePaise: null, portion: "200 ml · serves 1–2", vegetarian: true,
+      spice: "Mild", allergens: ["milk"], photo: "/food/cucumber-raita.jpg", prepMinutes: 3, featured: false, active: true,
+    },
+    {
+      id: "gulab-jamun", name: "Gulab jamun", description: "Soft milk dumplings soaked in warm cardamom syrup. Two pieces to finish your meal.",
+      category: "Sweets", pricePaise: 10000, familyPricePaise: null, portion: "2 pieces · serves 1", vegetarian: true,
+      spice: "Sweet", allergens: ["milk", "wheat"], photo: "/food/gulab-jamun.jpg", prepMinutes: 3, featured: false, active: true,
     },
   ];
+  // Upgrade only the exact untouched historical demo placeholder, preserving admin edits.
+  await db.menuItem.updateMany({ where: { id: "mutton-haleem", photo: null, active: false, description: "Slow-cooked mutton and wheat. Seasonal sample dish, currently off the menu." },
+    data: { photo: "/food/mutton-haleem.jpg", active: true, allergens: ["wheat", "milk", "egg"], description: menu.find(item => item.id === "mutton-haleem")!.description } });
+  await db.menuItem.updateMany({ where: { id: "mutton-haleem", photo: "/food/mutton-haleem.jpg", description: menu.find(item => item.id === "mutton-haleem")!.description, allergens: { equals: ["wheat", "milk"] } }, data: { allergens: ["wheat", "milk", "egg"] } });
   for (const item of menu) {
     await db.menuItem.upsert({
       where: { id: item.id },
@@ -269,8 +287,8 @@ async function seed() {
         subtotalPaise: totalPaise,
         gstPaise: gstIncluded(totalPaise),
         workMinutes: 40,
-        fulfillment: "pickup",
-        address: "",
+        fulfillment: sample.outletId === "kukatpally" ? "delivery" : "pickup",
+        address: sample.outletId === "kukatpally" ? "Demo address: 10 KPHB Main Road, Kukatpally, Hyderabad 500072" : "",
         phone: "9000000000",
         note: "Sample order from the client brief",
         createdAt: new Date(now - sample.age * 60000),

@@ -8,6 +8,7 @@ import { money } from "@/lib/domain";
 import { useApp } from "./provider";
 import { Empty, ErrorNotice, Loading } from "./ui";
 import "./analytics.css";
+import { BusinessTargetPanel } from "./business-targets";
 
 const percent = (n: number, d: number) => d ? `${Math.round(n / d * 100)}%` : "—";
 export function AnalyticsScreen() {
@@ -44,6 +45,7 @@ export function AnalyticsScreen() {
         <div className="table-scroll"><table><thead><tr><th>Kitchen</th><th>Orders</th><th>Sales</th><th>Avg. prep</th><th>Cancelled</th><th>Repeat customers</th></tr></thead><tbody>{data.byOutlet.map(o => <tr key={o.id}><td><strong>{o.name}</strong></td><td>{o.orders}</td><td>{money(o.revenuePaise)}</td><td>{o.averagePrepMinutes === null ? "—" : `${o.averagePrepMinutes} min`}</td><td>{o.cancelled}</td><td>{percent(o.repeatCustomers, o.customers)}<small>{o.repeatCustomers} of {o.customers}</small></td></tr>)}</tbody></table></div>
         <p className="report-definition">Repeat customers placed at least two paid orders in the selected period. Outlet rows count repeat visits to that kitchen; the combined figure counts across kitchens. Cancelled orders were refunded; {m.expired} unpaid or expired checkouts are reported separately.</p>
       </section>
+      <BusinessTargetPanel targets={data.targets} outletId={outlet} canEdit={["ADMIN", "MANAGER"].includes(app.user?.role || "")} refresh={r.refresh} />
       <section className="panel report-panel"><div className="section-heading"><div><p className="eyebrow">DAY BY DAY</p><h2>Order activity</h2></div><span className="muted">India Standard Time</span></div>
         {data.daily.length ? <div className="report-bars">{data.daily.map(d => <div className="report-bar-row" key={d.date}><time dateTime={d.date}>{new Date(`${d.date}T12:00:00+05:30`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}</time><div className="report-bar-track"><div style={{ width: `${d.orders / highest * 100}%` }} /></div><strong>{d.orders}<span> orders</span></strong></div>)}</div> : <Empty title="Ready for your first order"><p>Activity will appear here as customers order directly.</p></Empty>}
         <p className="report-definition">Includes all submitted orders in the rolling {days === 1 ? "24-hour" : `${days}-day`} window, with no record cap. Empty dates are omitted. Preparation runs from payment confirmation to ready; older sample orders use their placed time. Updated {new Date(data.until).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })} IST.</p>

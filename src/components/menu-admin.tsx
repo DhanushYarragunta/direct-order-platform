@@ -9,6 +9,7 @@ import { Diet, Empty, ErrorNotice, FoodPhoto, Loading, Modal } from "./ui";
 import { useApp } from "./provider";
 import { MENU_DAYS, menuScheduleLabel, minuteTime } from "@/lib/menu-context";
 import "./menu-depth.css";
+import { OutletSettings } from "./outlet-settings";
 
 type MenuAdminData = { items: MenuItem[]; outlets: Outlet[] };
 const blank = {
@@ -42,6 +43,7 @@ function MenuAdmin() {
     [editing, setEditing] = useState<MenuItem | null>(null),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false),
+    [uploading, setUploading] = useState(false),
     [busy, setBusy] = useState<string | null>(null),
     [photo, setPhoto] = useState<string>(""),
     [scheduled, setScheduled] = useState(false),
@@ -262,6 +264,7 @@ function MenuAdmin() {
           ordering at one kitchen.
         </small>
       </section>
+      <OutletSettings onSaved={r.refresh} />
       <Modal
         open={!!editing}
         onClose={() => setEditing(null)}
@@ -424,12 +427,29 @@ function MenuAdmin() {
               Photo from your library
               <select value={photo} onChange={(e) => setPhoto(e.target.value)}>
                 <option value="">No photo yet</option>
+                {photo.startsWith("/api/media/") && <option value={photo}>Uploaded dish photo</option>}
                 {PHOTOS.map((p) => (
                   <option key={p} value={p}>
                     {p.split("/").pop()?.replaceAll("-", " ")}
                   </option>
                 ))}
               </select>
+            </label>
+            <label>Upload your own photo
+              <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading || saving} onChange={async event => {
+                const file = event.target.files?.[0]; event.target.value = "";
+                if (!file) return;
+                setError(""); setUploading(true);
+                try {
+                  if (file.size > 3 * 1024 * 1024) throw new Error("Choose a photo under 3 MB");
+                  const response = await fetch("/api/admin/photos", { method: "POST", body: file, headers: { "Content-Type": file.type } });
+                  const result = await response.json();
+                  if (!response.ok) throw new Error(result.error || "Upload failed");
+                  setPhoto(result.photo);
+                } catch (error) { setError((error as Error).message); }
+                finally { setUploading(false); }
+              }} />
+              <small>{uploading ? "Uploading…" : "JPEG, PNG or WebP · up to 3 MB / 16 megapixels. Upload photos you own or have permission to use; metadata is removed."}</small>
             </label>
             {photo && (
               <FoodPhoto
@@ -455,7 +475,7 @@ function MenuAdmin() {
               Mark as a house favourite
             </label>
             {error && <ErrorNotice message={error} />}
-            <button className="button primary full" disabled={saving}>
+            <button className="button primary full" disabled={saving || uploading}>
               {saving ? "Saving…" : "Save dish"}
             </button>
           </form>
