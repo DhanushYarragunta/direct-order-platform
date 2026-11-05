@@ -13,3 +13,7 @@ test-results/
 *.log
 
 tmp/
+output/
+theme-preview/
+Images/
+uploads/

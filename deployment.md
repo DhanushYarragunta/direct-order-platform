@@ -4,7 +4,7 @@
 
 Project repository: https://github.com/DhanushYarragunta/direct-order-platform
 
-The application is ready for local review. No public app deployment has been provisioned. The owner should commit and push the reviewed candidate before submitting; the existing remote may still show the earlier checkpoint.
+The application is ready for local review. No public app deployment has been provisioned. The selected deployment provider is Render; follow `docs/RENDER.md` and the root `render.yaml`. Public repository access and the previous feature commit (`8ec7601`) were checked on 4 November 2026. The quality changes are committed locally after verification; push separately after reviewing the new history.
 
 ## Local steps
 
@@ -14,8 +14,9 @@ The application is ready for local review. No public app deployment has been pro
 4. Run `npm run db:generate`, `npm run db:migrate`, and `npm run db:seed`.
 5. Run `npm run dev` and visit `http://127.0.0.1:3000`. Do not interchange localhost and 127.0.0.1 without updating the application origin.
 6. Run `npm run verify:core` before committing the review candidate. It includes integration tests in a separate temporary database, browser checks, and saved desktop/mobile screenshots. It starts a temporary server on port 3001 and shuts it down after the run.
+7. Optionally run `npm run test:performance` after the production build. It creates its own temporary database and server on port 3001, offers 30 orders over 90 seconds with three live kitchen screens, and times five automated mobile checkout flows. See `docs/PERFORMANCE.md` for scope and evidence. Do not run it simultaneously with browser verification because both use port 3001.
 
-For an existing PostgreSQL instance, copy `.env.example` to `.env` and supply your own values instead of using `db:local`. The seed is non-destructive: existing items, users and orders are preserved. Repeated seeding does not change demo passwords or reset sample order times.
+For an existing PostgreSQL instance, copy `.env.example` to `.env` and supply your own values instead of using `db:local`. The seed preserves existing records, except it upgrades the exact old FSSAI text placeholder and untouched inactive haleem demo row. Repeated seeding does not change demo passwords or reset sample order times.
 
 ## Environment variable names
 
@@ -53,13 +54,17 @@ SSE endpoints must permit streamed responses, disable proxy buffering, and allow
 
 Back up PostgreSQL, provide health monitoring, and verify session expiry, database recovery, and streaming behaviour on the chosen host. No platform, paid service, credentials, or deployment has been provisioned yet.
 
-Before a real launch, replace licence placeholders with verified FSSAI numbers, confirm photo rights and allergen declarations, implement real payments and delivery, set a retention/consent policy, remove demo data/shortcuts, and benchmark the expected peak. Those are production tasks beyond this local review candidate.
+For deployment commands, Docker/Compose, explicit public-demo opt-in, uploads persistence, CI, health monitoring and a backup/restore drill, follow `docs/LAUNCH_OPERATIONS.md`. Before a real business launch, record verified FSSAI numbers and verification notes in Admin outlet settings, confirm photo rights/allergens, provide the privacy contact and approved retention policy, and complete target-device and staging acceptance. Mock payments/messages remain within the assessment scope; actual providers require a separate production decision.
 
 ## Review the extended features
 
 - Customer: order two regular biryanis, apply BIRYANI10, select loyalty points and pay. Cancel while the order is PLACED to verify points return. WELCOME100 requires a new registered customer; the existing demo customer has paid history.
 - Customer party orders: send a request at least 24 hours ahead. Sign in as Manager for Kondapur (or Admin for any outlet), open Party requests and confirm with details. The customer sees the response.
 - Menu manager: edit a dish, add a Hyderabad city override, or set serving days and hours in IST. The kitchen stock switch remains independent of the serving schedule.
-- Overview: compare kitchen rows and change the reporting period. Repeat customers means two paid orders within that period, not lifetime retention.
+- Overview: compare kitchen rows and change the reporting period. Repeat customers means two paid orders within that period. The Business targets section separately reports 30-day cohorts and checkout timing, and lets managers enter aggregate app-order baselines for matching periods.
 
-The technical design PDF and this file are packaged in `output/submission.zip` (two files, under 25 MB). PDF source is `docs/TECHNICAL_DESIGN.md`; run `python scripts/build-tdd.py` with ReportLab and Pillow after browser verification to regenerate it.
+Generated outputs are ignored, not tracked. `npm run package:source` creates a small ZIP from committed source only. The optional technical design PDF and this file can be packaged in `output/submission.zip` (two files, under 25 MB). PDF source is `docs/TECHNICAL_DESIGN.md`; run `python scripts/build-tdd.py` with ReportLab and Pillow after browser verification to regenerate both the PDF and ZIP together. The builder validates the ZIP contents and size; visually inspect the resulting PDF before submission.
+
+## Quality verification (5 November 2026)
+
+The repository now includes `/api/health`, strict nonce CSP/HSTS, demo phone OTP, privacy controls, seven dishes, secure photo uploads, delivery completion, fees/localities, prepayment wait estimates, large tablet tickets, connection states and business-target metrics. See `docs/ACCEPTANCE_TESTING.md` for physical readability, human timing and sustained staging validation. No public deployment is claimed until a host is selected and checked.

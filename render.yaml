@@ -1,0 +1,75 @@
+# Reviewed demo deployment. See docs/RENDER.md for current cost and first-time setup.
+# Public demo accounts and simulated payments/phone codes are deliberately enabled.
+services:
+  - type: web
+    name: deccan-kitchen-web
+    runtime: docker
+    repo: https://github.com/DhanushYarragunta/direct-order-platform
+    branch: main
+    region: singapore
+    plan: 0.5c-512mb
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: node scripts/start-production.mjs
+    preDeployCommand: node node_modules/prisma/build/index.js migrate deploy
+    healthCheckPath: /api/health
+    autoDeployTrigger: 'off'
+    disk:
+      name: menu-uploads
+      mountPath: /app/uploads
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: deccan-kitchen-db
+          property: connectionString
+      - key: APP_ORIGIN
+        fromService:
+          name: deccan-kitchen-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: DEMO_MODE
+        value: 'true'
+      - key: ALLOW_PUBLIC_DEMO
+        value: 'true'
+      - key: DEMO_PASSWORD
+        generateValue: true
+      - key: RUN_BACKGROUND_JOBS
+        value: 'false'
+      - key: UPLOAD_DIR
+        value: /app/uploads
+
+  - type: worker
+    name: deccan-kitchen-worker
+    runtime: docker
+    repo: https://github.com/DhanushYarragunta/direct-order-platform
+    branch: main
+    region: singapore
+    plan: 0.5c-512mb
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: node --import tsx scripts/worker.ts
+    preDeployCommand: node node_modules/prisma/build/index.js migrate deploy
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: deccan-kitchen-db
+          property: connectionString
+      - key: DEMO_MODE
+        value: 'true'
+      - key: WORKER_HEARTBEAT_FILE
+        value: /tmp/deccan-worker-heartbeat
+
+databases:
+  - name: deccan-kitchen-db
+    region: singapore
+    plan: 0.1c-256mb
+    postgresMajorVersion: '16'
+    databaseName: deccan
+    user: deccan
+    diskSizeGB: 1
+    storageAutoscalingEnabled: false
+    ipAllowList: []
