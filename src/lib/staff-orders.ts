@@ -7,14 +7,20 @@ export async function listKitchenOrders(outletId: string, now = new Date()) {
   // One snapshot also avoids losing or duplicating a ticket during handoff.
   const [active, recent] = await db.$transaction([
     db.order.findMany({
-      where: { outletId, status: { in: ["PLACED", "PREPARING", "READY"] } },
+      where: { outletId, OR: [
+        { status: { in: ["PLACED", "PREPARING", "READY"] } },
+        { fulfillment: "delivery", status: { in: ["HANDED_OFF", "OUT_FOR_DELIVERY"] } },
+      ] },
       include: orderInclude,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     }),
     db.order.findMany({
       where: {
         outletId,
-        status: { in: ["HANDED_OFF", "CANCELLED"] },
+        OR: [
+          { status: { in: ["DELIVERED", "CANCELLED"] } },
+          { status: "HANDED_OFF", fulfillment: "pickup" },
+        ],
         createdAt: { gte: new Date(now.getTime() - 24 * 3600000) },
       },
       include: orderInclude,

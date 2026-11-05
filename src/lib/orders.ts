@@ -6,14 +6,51 @@ import { AppError, AuthUser, staffOutlet } from "./auth";
 import {
   cartLineKey,
   canTransition,
-  distanceKm,
+  gstIncluded,
   estimatePreparation,
   overridePromise,
 } from "./domain";
-import { checkoutSchema, paymentSchema } from "./validation";
+import { checkoutSchema, paymentSchema, quoteSchema } from "./validation";
 import { priceCart } from "./pricing";
 import { menuForOutlet, menuScheduleOpen } from "./menu-context";
 import { lockRewards, quoteRewards, releaseRewards, earnRewards, firstOrderEligible } from "./rewards";
+import { deliveryFee, deliveryOutlet, type DeliveryLocation } from "./delivery";
+import { validCheckoutStart } from "./checkout-timing";
+
+export async function resolveCheckoutOutlet(tx: Prisma.TransactionClient, input: DeliveryLocation & { outletId: string; fulfillment?: string }) {
+  if (input.fulfillment === "delivery") {
+    try { return deliveryOutlet(await tx.outlet.findMany(), input); }
+    catch (error) { throw new AppError(400, (error as Error).message); }
+  }
+  const outlet = await tx.outlet.findUnique({ where: { id: input.outletId } });
+  if (!outlet?.open) throw new AppError(409, "This kitchen is currently closed");
+  return outlet;
+}
+
+async function preparationQuote(tx: Prisma.TransactionClient, outlet: { id: string; minPrepMinutes: number; activeStations: number }, workMinutes: number) {
+  const queue = await tx.order.aggregate({
+    where: { outletId: outlet.id, status: { in: ["PLACED", "PREPARING"] } },
+    _sum: { workMinutes: true },
+  });
+  return estimatePreparation(workMinutes, queue._sum.workMinutes || 0, outlet.minPrepMinutes, outlet.activeStations);
+}
+
+export async function quoteCheckout(tx: Prisma.TransactionClient, input: z.infer<typeof quoteSchema>, userId: string) {
+  const outlet = await resolveCheckoutOutlet(tx, input);
+  const priced = await priceCheckoutCart(tx, { ...input, outletId: outlet.id });
+  const rewards = await quoteRewards(tx, userId, priced.totalPaise, input.couponCode, 0, input.useLoyalty);
+  let fee: number;
+  try { fee = deliveryFee(priced.totalPaise, input.fulfillment || "pickup", outlet); }
+  catch (error) { throw new AppError(409, (error as Error).message); }
+  const estimate = await preparationQuote(tx, outlet, priced.workMinutes);
+  return {
+    ...rewards, totalPaise: rewards.totalPaise + fee, gstPaise: gstIncluded(rewards.totalPaise + fee),
+    deliveryFeePaise: fee, fulfillment: input.fulfillment || "pickup", outletId: outlet.id, outletName: outlet.name,
+    estimateMinutes: estimate.minutes, estimateFallback: estimate.fallback,
+    quotedAt: new Date().toISOString(), minimumMinutes: outlet.minPrepMinutes,
+    minDeliveryPaise: outlet.minDeliveryPaise, freeDeliveryAbovePaise: outlet.freeDeliveryAbovePaise,
+  };
+}
 
 export async function priceCheckoutCart(
   tx: Prisma.TransactionClient,
@@ -86,6 +123,8 @@ export async function checkout(
   try {
     return await serializable(async (tx) => {
       await lockRewards(tx, user.id);
+      if ((await tx.user.findUnique({ where: { id: user.id }, select: { deletedAt: true } }))?.deletedAt)
+        throw new AppError(401, "This account has been deleted");
       const repeated = await tx.order.findUnique({ where: {
         userId_checkoutKey: { userId: user.id, checkoutKey: input.checkoutKey },
       } });
@@ -93,25 +132,23 @@ export async function checkout(
         if (repeated.cartHash !== cartHash) throw new AppError(409, "This checkout changed. Please start a new checkout.");
         return repeated;
       }
-      await tx.$queryRaw`SELECT "id" FROM "Outlet" WHERE "id"=${input.outletId} FOR UPDATE`;
+      const selected = await resolveCheckoutOutlet(tx, input);
+      await tx.$queryRaw`SELECT "id" FROM "Outlet" WHERE "id"=${selected.id} FOR UPDATE`;
       const outlet = await tx.outlet.findUnique({
-        where: { id: input.outletId },
+        where: { id: selected.id },
       });
       if (!outlet?.open)
         throw new AppError(409, "This kitchen is currently closed");
-      if (
-        input.fulfillment === "delivery" &&
-        distanceKm(
-          { latitude: input.latitude!, longitude: input.longitude! },
-          outlet,
-        ) > outlet.radiusKm
-      )
-        throw new AppError(
-          400,
-          "This address is outside the kitchen's delivery area",
-        );
-      const priced = await priceCheckoutCart(tx, input);
+      const priced = await priceCheckoutCart(tx, { ...input, outletId: outlet.id });
       const quote = await quoteRewards(tx, user.id, priced.totalPaise, input.couponCode, input.redeemedPoints);
+      let fee: number;
+      try { fee = deliveryFee(priced.totalPaise, input.fulfillment, outlet); }
+      catch (error) { throw new AppError(409, (error as Error).message); }
+      const totalPaise = quote.totalPaise + fee;
+      if (input.expectedTotalPaise !== undefined && input.expectedTotalPaise !== totalPaise)
+        throw new AppError(409, "The price or delivery fee changed. Review the refreshed total before paying.");
+      const estimate = await preparationQuote(tx, outlet, priced.workMinutes);
+      const checkoutStartedAt = validCheckoutStart(input.checkoutStartedAt);
       const order = await tx.order.create({
         data: {
           number: `WEB-${Date.now().toString(36).toUpperCase()}-${randomBytes(2).toString("hex").toUpperCase()}`,
@@ -123,8 +160,14 @@ export async function checkout(
           couponCode: quote.couponCode,
           couponDiscountPaise: quote.couponDiscountPaise,
           redeemedPoints: quote.redeemedPoints,
-          totalPaise: quote.totalPaise,
-          gstPaise: quote.gstPaise,
+          totalPaise,
+          deliveryFeePaise: fee,
+          deliveryLocalityId: input.fulfillment === "delivery" ? input.localityId : null,
+          checkoutStartedAt,
+          checkoutMetricSource: checkoutStartedAt ? (process.env.DEMO_MODE === "true" ? "demo" : "browser") : null,
+          gstPaise: gstIncluded(totalPaise),
+          estimateMinutes: estimate.minutes,
+          estimateFallback: estimate.fallback,
           workMinutes: priced.workMinutes,
           fulfillment: input.fulfillment,
           address: input.address,
@@ -169,6 +212,8 @@ async function settle(
 ) {
   const order = await lockOrder(tx, id);
   await lockRewards(tx, order.userId);
+  if ((await tx.user.findUnique({ where: { id: order.userId }, select: { deletedAt: true } }))?.deletedAt)
+    throw new AppError(401, "This account has been deleted");
   if (order.status !== "PENDING_PAYMENT" || order.expiresAt < new Date()) {
     await tx.payment.updateMany({
       where: { id: paymentId, status: "PENDING" },
@@ -262,6 +307,7 @@ async function settle(
       status: "PLACED",
       paymentStatus: "PAID",
       placedAt: new Date(),
+      checkoutDurationMs: order.checkoutStartedAt ? Math.max(0, Date.now() - order.checkoutStartedAt.getTime()) : null,
       promisedAt,
       originalPromisedAt: promisedAt,
       estimateMinutes: estimate.minutes,
@@ -281,6 +327,9 @@ export async function payOrder(
   return serializable(async (tx) => {
     const order = await lockOrder(tx, id);
     if (order.userId !== user.id) throw new AppError(404, "Order not found");
+    await lockRewards(tx, user.id);
+    if ((await tx.user.findUnique({ where: { id: user.id }, select: { deletedAt: true } }))?.deletedAt)
+      throw new AppError(401, "This account has been deleted");
     const existing = await tx.payment.findUnique({
       where: {
         orderId_attemptKey: { orderId: id, attemptKey: input.attemptKey },
@@ -341,7 +390,7 @@ export async function advanceOrder(
     } else staffOutlet(user, order.outletId);
     if (order.version !== version)
       throw new AppError(409, "This order changed. Refresh and try again.");
-    if (!canTransition(order.status, status))
+    if (!canTransition(order.status, status, order.fulfillment))
       throw new AppError(409, "This order stage cannot be changed that way");
     if (status === "CANCELLED") {
       await releaseRewards(tx, order);
@@ -350,7 +399,8 @@ export async function advanceOrder(
         data: { status: "REFUNDED" },
       });
     }
-    if (status === "HANDED_OFF") await earnRewards(tx, order);
+    if ((status === "HANDED_OFF" && order.fulfillment === "pickup") || status === "DELIVERED")
+      await earnRewards(tx, { ...order, totalPaise: order.totalPaise - order.deliveryFeePaise });
     await tx.message.create({
       data: {
         orderId: id,
@@ -359,8 +409,10 @@ export async function advanceOrder(
           (
             {
               PREPARING: "Your food is now being prepared.",
-              READY: "Your order is ready for pickup.",
-              HANDED_OFF: "Your order has been handed over. Enjoy your meal!",
+              READY: order.fulfillment === "delivery" ? "Your order is ready for delivery handover." : "Your order is ready for pickup.",
+              HANDED_OFF: order.fulfillment === "delivery" ? "Your order has been handed to the delivery team." : "Your order has been handed over. Enjoy your meal!",
+              OUT_FOR_DELIVERY: "The outlet marked your order out for delivery. Delivery updates are recorded manually in this demo.",
+              DELIVERED: "The outlet confirmed delivery. Enjoy your meal!",
               CANCELLED:
                 "Your order was cancelled and the simulated payment refunded.",
             } as Record<string, string>
@@ -380,6 +432,7 @@ export async function advanceOrder(
       data: {
         status,
         readyAt: status === "READY" ? new Date() : order.readyAt,
+        deliveredAt: status === "DELIVERED" ? new Date() : order.deliveredAt,
         paymentStatus:
           status === "CANCELLED" ? "REFUNDED" : order.paymentStatus,
         version: { increment: 1 },

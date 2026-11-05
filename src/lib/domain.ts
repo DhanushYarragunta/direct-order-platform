@@ -4,6 +4,9 @@ export const PHOTOS = [
   "/food/vegetable-biryani.jpg",
   "/food/mirchi-ka-salan.jpg",
   "/food/double-ka-meetha.jpg",
+  "/food/mutton-haleem.jpg",
+  "/food/cucumber-raita.jpg",
+  "/food/gulab-jamun.jpg",
 ] as const;
 export const MAX_QUANTITY = 20;
 export const STATUS_LABELS: Record<string, string> = {
@@ -12,6 +15,8 @@ export const STATUS_LABELS: Record<string, string> = {
   PREPARING: "In the kitchen",
   READY: "Ready for pickup",
   HANDED_OFF: "Handed over",
+  OUT_FOR_DELIVERY: "Out for delivery",
+  DELIVERED: "Delivered",
   CANCELLED: "Cancelled",
 };
 
@@ -59,7 +64,9 @@ export function overridePromise(
   return new Date(now.getTime() + minutes * 60_000);
 }
 
-export function canTransition(from: string, to: string) {
+export function canTransition(from: string, to: string, fulfillment = "pickup") {
+  if (from === "HANDED_OFF" && to === "OUT_FOR_DELIVERY") return fulfillment === "delivery";
+  if (from === "OUT_FOR_DELIVERY" && to === "DELIVERED") return fulfillment === "delivery";
   return (
     (
       {

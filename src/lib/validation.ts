@@ -1,6 +1,10 @@
 import { z } from "zod";
-import { CATEGORIES, MAX_QUANTITY, PHOTOS } from "./domain";
+import { CATEGORIES, MAX_QUANTITY } from "./domain";
+import { isMenuPhoto } from "./photo-policy";
 import { normalizeCity } from "./menu-context";
+import { DELIVERY_LOCALITIES } from "./delivery";
+
+const localityId = z.string().refine((value) => DELIVERY_LOCALITIES.some((item) => item.id === value), "Choose a supported locality").optional();
 
 export const cartLineSchema = z
   .object({
@@ -28,14 +32,18 @@ export const checkoutSchema = z
     redeemedPoints: z.number().int().min(0).max(100000).optional(),
     latitude: z.number().min(-90).max(90).optional(),
     longitude: z.number().min(-180).max(180).optional(),
+    localityId,
+    localityConfirmed: z.boolean().optional(),
+    checkoutStartedAt: z.iso.datetime().optional(),
+    expectedTotalPaise: z.number().int().positive().optional(),
   })
   .strict()
   .superRefine((v, c) => {
     if (
       v.fulfillment === "delivery" &&
       (v.address.length < 8 ||
-        v.latitude === undefined ||
-        v.longitude === undefined)
+        (!v.localityId && (v.latitude === undefined || v.longitude === undefined)) ||
+        (!!v.localityId && !v.localityConfirmed))
     )
       c.addIssue({
         code: z.ZodIssueCode.custom,
@@ -48,6 +56,10 @@ export const quoteSchema = z.object({
   lines: z.array(cartLineSchema).min(1).max(30),
   couponCode: z.string().trim().max(30).transform((v) => v.toUpperCase()).optional(),
   useLoyalty: z.boolean().optional(),
+  fulfillment: z.enum(["pickup", "delivery"]).optional(),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
+  localityId,
 }).strict();
 export const loginSchema = z
   .object({
@@ -74,7 +86,7 @@ export const paymentSchema = z
   .strict();
 export const transitionSchema = z
   .object({
-    status: z.enum(["PREPARING", "READY", "HANDED_OFF", "CANCELLED"]),
+    status: z.enum(["PREPARING", "READY", "HANDED_OFF", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"]),
     version: z.number().int().nonnegative(),
   })
   .strict();
@@ -96,7 +108,7 @@ export const menuSchema = z
     vegetarian: z.boolean(),
     spice: z.enum(["Mild", "Medium", "Hot", "Sweet"]),
     allergens: z.array(z.string().trim().min(1).max(30)).max(12),
-    photo: z.enum(PHOTOS).nullable(),
+    photo: z.string().refine(isMenuPhoto, "Choose a supplied or uploaded menu photo").nullable(),
     prepMinutes: z.number().int().min(1).max(120),
     active: z.boolean(),
     featured: z.boolean(),

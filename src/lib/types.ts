@@ -1,3 +1,17 @@
+import type { RewardQuote } from "./reward-policy";
+
+export type CheckoutQuote = RewardQuote & {
+  outletId: string;
+  outletName: string;
+  fulfillment: string;
+  deliveryFeePaise: number;
+  estimateMinutes: number;
+  estimateFallback: boolean;
+  quotedAt: string;
+  minimumMinutes: number;
+  minDeliveryPaise: number;
+  freeDeliveryAbovePaise: number;
+};
 export type Outlet = {
   id: string;
   name: string;
@@ -8,6 +22,10 @@ export type Outlet = {
   radiusKm: number;
   minPrepMinutes: number;
   fssai: string;
+  fssaiVerified: boolean;
+  deliveryFeePaise: number;
+  minDeliveryPaise: number;
+  freeDeliveryAbovePaise: number;
   open: boolean;
 };
 export type User = {
@@ -69,6 +87,11 @@ export type Order = {
   couponDiscountPaise: number;
   redeemedPoints: number;
   totalPaise: number;
+  deliveryFeePaise: number;
+  deliveryLocalityId: string | null;
+  checkoutStartedAt: string | null;
+  checkoutDurationMs: number | null;
+  deliveredAt: string | null;
   gstPaise: number;
   fulfillment: string;
   address: string;

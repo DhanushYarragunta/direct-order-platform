@@ -1,16 +1,28 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
 import { cartLineKey, gstIncluded, money } from "@/lib/domain";
 import { useApp } from "./provider";
 import { Empty, FoodPhoto, Stepper } from "./ui";
-import type { RewardQuote } from "@/lib/reward-policy";
+import type { CheckoutQuote } from "@/lib/types";
+import { checkoutStart, finishCheckoutTiming } from "@/lib/checkout-timing";
 
-export function Cart({ checkoutLink = true, quote }: { checkoutLink?: boolean; quote?: RewardQuote }) {
+export function Cart({ checkoutLink = true, quote }: { checkoutLink?: boolean; quote?: CheckoutQuote }) {
   const app = useApp(),
     count = app.cart.reduce((s, l) => s + l.quantity, 0);
+  const panel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (app.cartReady && !count) finishCheckoutTiming();
+    if (!count || !panel.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { checkoutStart(); observer.disconnect(); }
+    });
+    observer.observe(panel.current);
+    return () => observer.disconnect();
+  }, [count > 0, app.cartReady]);
   return (
-    <section className="cart-panel" id="your-order">
+    <section className="cart-panel" id="your-order" ref={panel}>
       <div className="cart-heading">
         <h2>
           Your order <span>{count}</span>
@@ -99,8 +111,8 @@ export function Cart({ checkoutLink = true, quote }: { checkoutLink?: boolean; q
               <span>{money(quote?.gstPaise ?? gstIncluded(app.total))}</span>
             </div>
             <div>
-              <span>Pickup / demo delivery</span>
-              <span className="green">Free</span>
+              <span>{quote?.fulfillment === "delivery" ? "Delivery fee" : "Pickup"}</span>
+              <span>{quote?.deliveryFeePaise ? money(quote.deliveryFeePaise) : "Free"}</span>
             </div>
             <div className="grand-total">
               <strong>To pay</strong>
@@ -122,7 +134,7 @@ export function Cart({ checkoutLink = true, quote }: { checkoutLink?: boolean; q
                 Continue to checkout <ArrowRight size={17} />
               </Link>
             ))}
-          <p className="cart-footnote">Freshly made. Thoughtfully packed.</p>
+          <p className="cart-footnote">{quote?.fulfillment === "delivery" ? `Free delivery from ${money(quote.freeDeliveryAbovePaise)} before discounts.` : "Delivery fees and minimum are shown at checkout."}</p>
         </>
       )}
     </section>

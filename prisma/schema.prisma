@@ -20,6 +20,8 @@ enum OrderStatus {
   PREPARING
   READY
   HANDED_OFF
+  OUT_FOR_DELIVERY
+  DELIVERED
   CANCELLED
 }
 
@@ -40,6 +42,8 @@ enum CateringStatus {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
+  phone         String?   @unique
+  deletedAt     DateTime?
   name          String
   passwordHash  String
   role          Role      @default(CUSTOMER)
@@ -75,11 +79,16 @@ model Outlet {
   minPrepMinutes Int   @default(25)
   activeStations Int   @default(4)
   fssai         String
+  fssaiVerified Boolean @default(false)
+  deliveryFeePaise Int @default(4000)
+  minDeliveryPaise Int @default(19900)
+  freeDeliveryAbovePaise Int @default(59900)
   open          Boolean @default(true)
   updatedAt     DateTime @updatedAt
   users         User[]
   orders        Order[]
   availability  Availability[]
+  channelBaselines ChannelBaseline[]
   cateringRequests CateringRequest[]
 }
 
@@ -138,6 +147,12 @@ model Order {
   status       OrderStatus @default(PENDING_PAYMENT)
   paymentStatus PaymentStatus @default(PENDING)
   totalPaise   Int
+  deliveryFeePaise Int @default(0)
+  deliveryLocalityId String?
+  checkoutStartedAt DateTime?
+  checkoutDurationMs Int?
+  checkoutMetricSource String?
+  deliveredAt DateTime?
   subtotalPaise Int @default(0)
   couponCode String?
   couponDiscountPaise Int @default(0)
@@ -287,4 +302,30 @@ model RateLimit {
   hits      Int @default(1)
   expiresAt DateTime
   @@index([expiresAt])
+}
+
+model PhoneOtp {
+  id String @id
+  phone String
+  codeHash String
+  name String
+  consentAt DateTime
+  marketingOptIn Boolean @default(false)
+  attempts Int @default(0)
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+}
+
+model ChannelBaseline {
+  id String @id @default(cuid())
+  outletId String
+  outlet Outlet @relation(fields: [outletId], references: [id])
+  periodStart DateTime
+  periodEnd DateTime
+  appOrders Int
+  source String
+  recordedAt DateTime @default(now())
+  @@unique([outletId, periodStart, periodEnd])
 }

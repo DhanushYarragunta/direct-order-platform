@@ -20,6 +20,7 @@ import type { Order } from "@/lib/types";
 import { useApp } from "./provider";
 import { Empty, ErrorNotice, FoodPhoto, Loading } from "./ui";
 import { RewardsWallet } from "./rewards-wallet";
+import { finishCheckoutTiming } from "@/lib/checkout-timing";
 
 export const time = (value: string) =>
   new Date(value).toLocaleTimeString("en-IN", {
@@ -154,6 +155,7 @@ export function PaymentScreen({ id }: { id: string }) {
     [paymentError, setPaymentError] = useState("");
   useEffect(() => {
     if (order?.paymentStatus !== "PAID" || !app.cartReady) return;
+    finishCheckoutTiming();
     let active = true;
     void app.consumeCheckout(id).then((consumed) => {
       if (!active) return;
@@ -205,6 +207,8 @@ export function PaymentScreen({ id }: { id: string }) {
         </p>
         <div className="payment-amount">{money(order.totalPaise)}</div>
         <span className="muted">Includes {money(order.gstPaise)} GST</span>
+        {order.estimateMinutes && <p className="pending-notice"><Clock3 size={20} /> Estimated preparation: {order.estimateMinutes} min. This estimate includes the kitchen load at checkout; it is confirmed when payment succeeds. Travel time is additional.</p>}
+        {order.fulfillment === "delivery" && <p>Delivery fee: {order.deliveryFeePaise ? money(order.deliveryFeePaise) : "Free"} · included in your total.</p>}
         {order.status === "CANCELLED" ? (
           <ErrorNotice
             message={
@@ -308,7 +312,9 @@ export function OrderScreen({ id }: { id: string }) {
         </Link>
       </div>
     );
-  const stages = ["PLACED", "PREPARING", "READY", "HANDED_OFF"],
+  const stages = order.fulfillment === "delivery"
+      ? ["PLACED", "PREPARING", "READY", "HANDED_OFF", "OUT_FOR_DELIVERY", "DELIVERED"]
+      : ["PLACED", "PREPARING", "READY", "HANDED_OFF"],
     stage = stages.indexOf(order.status),
     late = order.messages.some((m) => m.kind === "LATE");
   return (
@@ -328,7 +334,7 @@ export function OrderScreen({ id }: { id: string }) {
         <div>
           <p className="eyebrow">{order.outlet.name.toUpperCase()}</p>
           <h1>
-            {order.status === "HANDED_OFF"
+            {(order.status === "HANDED_OFF" && order.fulfillment === "pickup") || order.status === "DELIVERED"
               ? "Enjoy every bite."
               : order.status === "CANCELLED"
                 ? "Order cancelled."
@@ -350,7 +356,7 @@ export function OrderScreen({ id }: { id: string }) {
                 </div>
                 <div>
                   <span>
-                    {["READY", "HANDED_OFF"].includes(order.status)
+                    {["READY", "HANDED_OFF", "OUT_FOR_DELIVERY", "DELIVERED"].includes(order.status)
                       ? "READY AT"
                       : "ESTIMATED READY TIME"}
                   </span>
@@ -377,9 +383,11 @@ export function OrderScreen({ id }: { id: string }) {
                               "Your order is with the kitchen",
                               "Freshly preparing your meal",
                               order.fulfillment === "delivery"
-                                ? "Waiting for delivery partner"
+                                ? "Waiting for delivery handover"
                                 : "Come by the counter",
-                              "Shared with a smile",
+                              order.fulfillment === "delivery" ? "Handed to the delivery team" : "Shared with a smile",
+                              "Delivery team has left the outlet",
+                              "Delivery confirmed by the outlet",
                             ][i]
                           }
                         </small>
@@ -401,7 +409,7 @@ export function OrderScreen({ id }: { id: string }) {
               </p>
             )}
             {late &&
-              !["READY", "HANDED_OFF", "CANCELLED"].includes(order.status) && (
+              !["READY", "HANDED_OFF", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"].includes(order.status) && (
                 <ErrorNotice message="We’re running behind. The outlet manager has been alerted; updates will appear below." />
               )}
           </section>
@@ -434,7 +442,9 @@ export function OrderScreen({ id }: { id: string }) {
                 ? order.address
                 : order.outlet.address}
             </p>
-            <small>FSSAI: {order.outlet.fssai}</small>
+            <small>{order.outlet.fssaiVerified ? "FSSAI licence" : "DEMO FSSAI number · not a verified licence"}: {order.outlet.fssai}</small>
+            {order.fulfillment === "delivery" && <p>Delivery stages are recorded manually by the outlet in this demo.</p>}
+            {order.deliveredAt && <p>Delivered at {time(order.deliveredAt)}</p>}
             {order.note && (
               <p className="order-note">Kitchen note: {order.note}</p>
             )}
@@ -466,6 +476,7 @@ export function OrderScreen({ id }: { id: string }) {
             </div>
             {order.couponDiscountPaise > 0 && <div className="green"><span>{order.couponCode}</span><span>−{money(order.couponDiscountPaise)}</span></div>}
             {order.redeemedPoints > 0 && <div className="green"><span>{order.redeemedPoints} loyalty points</span><span>−{money(order.redeemedPoints * 100)}</span></div>}
+            {order.fulfillment === "delivery" && <div><span>Delivery fee</span><span>{order.deliveryFeePaise ? money(order.deliveryFeePaise) : "Free"}</span></div>}
             <div>
               <span>GST included (5%)</span>
               <span>{money(order.gstPaise)}</span>
@@ -481,7 +492,7 @@ export function OrderScreen({ id }: { id: string }) {
               (p) => p.status === "PAID" || p.status === "REFUNDED",
             )?.method || "Test gateway"}
           </p>
-          {order.status === "HANDED_OFF" && <p className="reward-success">You earned {Math.floor(order.totalPaise / 10000)} loyalty points. Thank you for ordering direct.</p>}
+          {((order.status === "HANDED_OFF" && order.fulfillment === "pickup") || order.status === "DELIVERED") && <p className="reward-success">You earned {Math.floor((order.totalPaise - order.deliveryFeePaise) / 10000)} loyalty points. Thank you for ordering direct.</p>}
           {order.status === "CANCELLED" && order.redeemedPoints > 0 && <p className="reward-success">Your {order.redeemedPoints} reserved points have been returned.</p>}
           {order.status === "PLACED" && (
             <>
