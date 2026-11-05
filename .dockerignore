@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+.local
+output
+test-results
+playwright-report
+tmp
+theme-preview
+Images
+.DS_Store
+*.tsbuildinfo
+public/uploads
+uploads

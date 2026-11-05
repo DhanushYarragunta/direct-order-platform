@@ -1,0 +1,74 @@
+name: deccan-kitchen
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: deccan
+      POSTGRES_DB: deccan
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a strong POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deccan -d deccan"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+  migrate:
+    build: .
+    image: deccan-kitchen:local
+    command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+    environment: &database-env
+      DATABASE_URL: postgresql://deccan:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/deccan
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+  web:
+    image: deccan-kitchen:local
+    build: .
+    environment: &app-env
+      <<: *database-env
+      APP_ORIGIN: ${APP_ORIGIN:?Set the exact application origin}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      ALLOW_PUBLIC_DEMO: ${ALLOW_PUBLIC_DEMO:-false}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      PRIVACY_CONTACT: ${PRIVACY_CONTACT:-}
+      UPLOAD_DIR: /app/uploads
+      RUN_BACKGROUND_JOBS: "false"
+    ports:
+      # Terminate TLS and enforce request limits in a reverse proxy on this host.
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    init: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+  worker:
+    image: deccan-kitchen:local
+    command: ["node", "--import", "tsx", "scripts/worker.ts"]
+    environment:
+      <<: *app-env
+      WORKER_HEARTBEAT_FILE: /tmp/deccan-worker-heartbeat
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "scripts/healthcheck.mjs", "--worker"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    init: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  postgres-data:
+  uploads:

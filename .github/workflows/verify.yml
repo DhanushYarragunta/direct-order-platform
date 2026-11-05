@@ -1,0 +1,54 @@
+name: Verify application
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: deccan_ci
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: deccan_ci
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U deccan_ci -d deccan_ci"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://deccan_ci:ci_only_password@127.0.0.1:55432/deccan_ci
+      APP_ORIGIN: http://127.0.0.1:3001
+      DEMO_MODE: "true"
+      DEMO_PASSWORD: ci-only-demo-password
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - name: Isolated database and browser verification
+        run: node scripts/verify-core.mjs
+      - name: Build deployment image
+        run: docker build -t deccan-kitchen:ci .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-results
+          path: |
+            .local/core-verification.json
+            .local/verification.log
+            .local/screenshots
+            playwright-report
+            test-results
+          retention-days: 7

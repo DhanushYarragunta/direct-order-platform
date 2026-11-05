@@ -13,7 +13,7 @@ export async function currentUser() {
     where: { id: tokenHash(token) },
     include: { user: { include: { outlet: true } } },
   });
-  if (!session || session.expiresAt < new Date()) return null;
+  if (!session || session.expiresAt < new Date() || session.user.deletedAt) return null;
   const { passwordHash: _, ...user } = session.user;
   return user;
 }
@@ -41,8 +41,11 @@ export function staffOutlet(user: AuthUser, requested: string) {
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("hex"),
     expiresAt = new Date(Date.now() + 7 * 86400_000);
-  await db.session.create({
-    data: { id: tokenHash(token), userId, expiresAt },
+  await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id"=${userId} FOR UPDATE`;
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { deletedAt: true } });
+    if (!user || user.deletedAt) throw new AppError(401, "This account is no longer available");
+    await tx.session.create({ data: { id: tokenHash(token), userId, expiresAt } });
   });
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,

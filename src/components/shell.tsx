@@ -153,6 +153,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </header>
         <main>{children}</main>
         <footer className="footer">
+          <Link href="/privacy">Privacy & account</Link>
           <span>
             © {new Date().getFullYear()} Deccan Kitchen & Co. · Concept brand
             for Company A

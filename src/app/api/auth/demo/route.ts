@@ -21,7 +21,7 @@ export async function POST(request: Request) {
         .strict(),
     );
     const user = await db.user.findUnique({ where: { id: `demo-${account}` } });
-    if (!user) throw new AppError(503, "Demo accounts are not seeded yet");
+    if (!user || user.deletedAt) throw new AppError(503, "This demo account is unavailable");
     await createSession(user.id);
     return { ok: true, role: user.role };
   });

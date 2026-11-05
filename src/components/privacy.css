@@ -1,0 +1,18 @@
+.privacy-page { max-width: 1000px; margin: auto; color: #23342e; }
+.privacy-page h1 { font-size: clamp(30px, 5vw, 44px); }
+.privacy-page h2 { font-size: 23px; margin: 0 0 14px; color: #172c22; }
+.privacy-page p, .privacy-page label, .privacy-page summary, .phone-sign-in p { font-size: 16px; line-height: 1.65; }
+.privacy-page section { margin-top: 28px; }
+.privacy-page a, .phone-sign-in a, .auth-card .check-label a { color: #185a3c; text-decoration: underline; }
+.privacy-lead { max-width: 70ch; }
+.privacy-controls { padding: 26px; border: 1px solid #cad7ce; background: white; border-radius: 16px; }
+.privacy-callout { border-left: 4px solid #80550b; background: #fff3d6; padding: 14px 18px; color: #523500; font-size: 15px; line-height: 1.5; }
+.privacy-delete { margin-top: 26px; border-top: 1px solid #d1dad4; padding-top: 20px; }
+.privacy-delete summary { cursor: pointer; color: #8f1e1e; font-weight: 700; }
+.privacy-delete input { max-width: 280px; }
+.privacy-delete .button { align-self: flex-start; color: white; background: #922323; }
+.privacy-success { padding: 12px 16px; color: #174529; background: #e5f3e9; border-radius: 8px; }
+.auth-methods { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
+.auth-methods .button { flex: 1; white-space: nowrap; }
+.phone-sign-in p { margin: 0; }
+@media (max-width: 600px) { .privacy-controls { padding: 18px; } .privacy-page h2 { font-size: 21px; } }

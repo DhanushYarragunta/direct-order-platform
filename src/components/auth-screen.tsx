@@ -5,19 +5,30 @@ import { ArrowRight, ChefHat, ShieldCheck, UserRound } from "lucide-react";
 import { request } from "@/lib/client";
 import { useApp } from "./provider";
 import { ErrorNotice } from "./ui";
+import Link from "next/link";
+import { PhoneSignIn } from "./phone-sign-in";
+import "./privacy.css";
 
 export function AuthScreen() {
   const app = useApp(),
     router = useRouter(),
     [register, setRegister] = useState(false),
+    [phoneSignIn, setPhoneSignIn] = useState(false),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   async function complete(role: string) {
     await app.refreshUser();
     const next = new URLSearchParams(location.search).get("next");
+    let safeNext: string | null = null;
+    if (next?.startsWith("/")) {
+      try {
+        const target = new URL(next, location.origin);
+        if (target.origin === location.origin) safeNext = `${target.pathname}${target.search}${target.hash}`;
+      } catch { /* Malformed return paths use the role's default page. */ }
+    }
     router.push(
-      next?.startsWith("/") && !next.startsWith("//")
-        ? next
+      safeNext
+        ? safeNext
         : role === "CUSTOMER"
           ? "/"
           : "/workspace",
@@ -92,7 +103,11 @@ export function AuthScreen() {
             ? "Create your account to order directly."
             : "Sign in for good food, without the fuss."}
         </p>
-        <form onSubmit={submit} className="form-stack">
+        {app.demoMode && <div className="auth-methods" aria-label="Sign-in method">
+          <button type="button" className={`button ${!phoneSignIn ? "primary" : ""}`} aria-pressed={!phoneSignIn} onClick={() => setPhoneSignIn(false)}>Email</button>
+          <button type="button" className={`button ${phoneSignIn ? "primary" : ""}`} aria-pressed={phoneSignIn} onClick={() => setPhoneSignIn(true)}>Phone code · demo</button>
+        </div>}
+        {phoneSignIn ? <PhoneSignIn complete={complete} /> : <form onSubmit={submit} className="form-stack">
           {register && (
             <label>
               Your name
@@ -137,7 +152,7 @@ export function AuthScreen() {
                 <input type="checkbox" name="consent" required />
                 <span>
                   I agree to the use of my details to fulfil my orders and send
-                  order updates.
+                  order updates, as explained in the <Link href="/privacy">privacy notice</Link>.
                 </span>
               </label>
               <label className="check-label">
@@ -151,13 +166,14 @@ export function AuthScreen() {
             {busy ? "Please wait…" : register ? "Create account" : "Sign in"}
             <ArrowRight size={18} />
           </button>
-        </form>
+        </form>}
         <p className="auth-switch">
           {register ? "Already have an account?" : "New to our kitchen?"}{" "}
           <button
             className="text-button"
             onClick={() => {
               setRegister(!register);
+              setPhoneSignIn(false);
               setError("");
             }}
           >

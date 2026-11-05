@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { AppError, staffOutlet, type AuthUser } from "./auth";
 import { db, serializable } from "./db";
+import { assertAccountActive } from "./privacy";
 import {
   cateringSchema,
   cateringDecisionSchema,
@@ -76,6 +77,7 @@ export async function createCatering(
     .digest("hex");
   return serializable(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${user.id} FOR UPDATE`;
+    await assertAccountActive(tx, user.id);
     const existing = await tx.cateringRequest.findUnique({
       where: { userId_requestKey: { userId: user.id, requestKey } },
       include,

@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     await rateLimit(`login:${input.email}`);
     const user = await db.user.findUnique({ where: { email: input.email } });
     const valid = verifyPassword(input.password, user?.passwordHash || dummy);
-    if (!user || !valid)
+    if (!user || user.deletedAt || !valid)
       throw new AppError(401, "Email or password is incorrect");
     await createSession(user.id);
     return { ok: true, role: user.role };
