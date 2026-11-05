@@ -1,0 +1,64 @@
+/* Operational typography intentionally stays large at every breakpoint. */
+.kitchen-page { color: #14231c; max-width: 2000px; }
+.kitchen-page .page-intro { flex-wrap: wrap; gap: 20px; }
+.kitchen-page .kitchen-toolbar { flex-wrap: wrap; gap: 10px; }
+.kitchen-page .kitchen-toolbar .button,
+.kitchen-page .kitchen-toolbar .staff-outlet-select { font-size: 16px; min-height: 48px; }
+.kitchen-page .kitchen-toolbar .icon-button { min-width: 48px; min-height: 48px; background: white; border: 1px solid #66776d; }
+.kitchen-page .kitchen-toolbar .button[aria-pressed="true"] { background: #d4f0dd; border-color: #17633d; color: #10492c; }
+.kitchen-connection { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 14px; font-size: 16px; color: #3d5044; }
+.connection-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid currentColor; border-radius: 8px; padding: 8px 12px; font-size: 16px; font-weight: 800; }
+.connection-chip > span { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+.connection-live { color: #145c35; background: #e1f3e8; }
+.connection-reconnecting, .connection-connecting { color: #6b4200; background: #fff0c3; }
+.connection-offline { color: #8a1520; background: #ffe5e7; }
+.kitchen-page .tablet-notice { margin: 12px 0; color: #344b3b; font-size: 16px; line-height: 1.5; }
+.kitchen-sync-warning { display: flex; align-items: center; gap: 12px; background: #fff0c3; border: 2px solid #885a00; color: #4d3000; padding: 16px; border-radius: 10px; margin: 16px 0; font-size: 18px; line-height: 1.5; font-weight: 600; }
+.kitchen-sync-warning svg { flex-shrink: 0; }
+.kitchen-legend { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 18px; font-size: 16px; color: #344b3b; }
+.kitchen-page .kitchen-board { display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(310px, 1fr); gap: 18px; overflow-x: auto; align-items: start; margin-top: 20px; padding-bottom: 12px; scroll-snap-type: x proximity; }
+.kitchen-page .kitchen-column { background: #e5eae6; border: 1px solid #bdc9bf; border-radius: 12px; padding: 12px; scroll-snap-align: start; }
+.kitchen-page .column-title { padding: 8px 3px 18px; gap: 10px; }
+.kitchen-page .column-title h2 { font-size: 21px; font-weight: 800; color: #15291c; }
+.kitchen-page .column-dot { width: 10px; height: 10px; background: #215c3a; flex-shrink: 0; }
+.kitchen-page .column-count { min-width: 32px; height: 32px; font-size: 18px; color: #173722; background: white; border: 1px solid #a4b8ab; }
+.kitchen-page .ticket-list { gap: 18px; }
+.kitchen-page .kitchen-ticket { --ticket-color: #17633d; --ticket-band: #17633d; --ticket-ink: white; padding: 0 18px 18px; overflow: hidden; border: 3px solid var(--ticket-color); border-radius: 10px; background: #fff; box-shadow: 0 3px 8px #18351f0d; }
+.kitchen-page .ticket-due-soon { --ticket-color: #9c6500; --ticket-band: #ffda70; --ticket-ink: #3d2900; }
+.kitchen-page .ticket-late { --ticket-color: #b02029; --ticket-band: #b02029; --ticket-ink: white; background: #fff7f7; }
+.kitchen-page .ticket-band { margin: 0 -18px 18px; padding: 11px 18px; background: var(--ticket-band); color: var(--ticket-ink); font-size: 20px; line-height: 1.3; text-transform: uppercase; letter-spacing: .04em; }
+.kitchen-page .ticket-heading { flex-wrap: wrap; align-items: start; gap: 10px; }
+.kitchen-page .ticket-heading > strong { font-size: 30px; line-height: 1.2; letter-spacing: -.7px; color: #12241a; font-variant-numeric: tabular-nums; }
+.kitchen-page .ticket-heading > span { font-size: 16px; color: #213e2d; background: #e7eee9; padding: 6px 9px; font-weight: 800; }
+.kitchen-page .ticket-timer { font-size: 26px; line-height: 1.3; font-weight: 800; gap: 8px; color: #164a2b; margin-top: 16px; font-variant-numeric: tabular-nums; }
+.kitchen-page .ticket-due-soon .ticket-timer { color: #6e4700; }
+.kitchen-page .ticket-late .ticket-timer { color: #a01621; }
+.kitchen-page .ticket-timer svg { width: 24px; height: 24px; flex-shrink: 0; }
+.kitchen-page .ticket-timer small { flex-basis: 100%; margin: 4px 0 0; font-size: 16px; color: #3f5346; font-weight: 500; }
+.kitchen-page .ticket-items { border-top: 1px solid #a9b9ad; padding-top: 18px; margin-top: 18px; gap: 20px; }
+.kitchen-page .ticket-items > div { gap: 10px; }
+.kitchen-page .ticket-items b { font-size: 28px; line-height: 1.35; color: #183d25; min-width: 38px; }
+.kitchen-page .ticket-items strong { font-size: 24px; line-height: 1.35; color: #152a1e; overflow-wrap: anywhere; }
+.kitchen-page .ticket-items small { font-size: 18px; line-height: 1.5; color: #354a3d; margin-top: 6px; overflow-wrap: anywhere; }
+.kitchen-page .ticket-note, .kitchen-page .ticket-late .ticket-note { padding: 12px; font-size: 20px; line-height: 1.5; font-weight: 700; color: #3a2b05; background: #fff0bf; border-left: 5px solid #987000; overflow-wrap: anywhere; }
+.kitchen-page .ticket-total { font-size: 16px; line-height: 1.5; gap: 12px; color: #344b3a; border-top: 1px solid #bbc8bf; }
+.kitchen-page .ticket-total strong { color: #213d2b; }
+.kitchen-page .kitchen-ticket > .button { font-size: 18px; min-height: 54px; padding: 14px; background: #173e28; color: #fff; white-space: normal; }
+.kitchen-page .kitchen-ticket > .button:disabled { opacity: .6; }
+.kitchen-page .manager-alert { font-size: 18px; line-height: 1.5; font-weight: 800; padding: 12px; border: 2px solid #b02029; background: #ffe2e5; color: #85101a; gap: 8px; }
+.kitchen-page .manager-alert svg { width: 22px; height: 22px; flex-shrink: 0; }
+.kitchen-page .promise-button { font-size: 16px; color: #244a32; text-decoration: underline; min-height: 44px; margin: 8px auto 0; }
+.kitchen-page .empty-column h3 { font-size: 20px; color: #284831; }
+.kitchen-page .empty-column p { font-size: 16px; color: #475e4d; }
+.kitchen-page .empty-check { color: #355b3d; border-color: #647e69; }
+.kitchen-page button:focus-visible, .kitchen-page select:focus-visible { outline: 3px solid #153fca; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .kitchen-page .kitchen-board { display: flex; flex-direction: column; overflow: visible; }
+  .kitchen-page .kitchen-column { width: 100%; flex: 0 0 auto; }
+  .kitchen-page .kitchen-toolbar { width: 100%; }
+  .kitchen-page .kitchen-toolbar .button { flex: 1 1 160px; }
+  .kitchen-page .ticket-heading > strong { font-size: 30px; }
+}
+
+.kitchen-page .ticket-delivery { padding: 12px; margin-top: 16px; background: #e9effa; color: #213553; font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+.kitchen-page .ticket-delivery p { margin-top: 6px; }

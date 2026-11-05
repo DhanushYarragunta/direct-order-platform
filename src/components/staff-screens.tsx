@@ -10,6 +10,8 @@ import {
   RefreshCw,
   Settings2,
   TriangleAlert,
+  Volume2,
+  Monitor,
 } from "lucide-react";
 import { request, useResource } from "@/lib/client";
 import { money } from "@/lib/domain";
@@ -18,6 +20,9 @@ import { useApp } from "./provider";
 import { Diet, Empty, ErrorNotice, Loading, Modal } from "./ui";
 import { time } from "./order-screens";
 import { AnalyticsScreen } from "./analytics-screen";
+import { useKitchenTablet } from "./kitchen-tablet";
+import { kitchenUrgency } from "@/lib/kitchen-display";
+import "./kitchen-quality.css";
 
 type StaffData = { outlet: Outlet; outlets: Outlet[]; orders: Order[] };
 export function StaffGate({
@@ -118,9 +123,10 @@ function Kitchen() {
     [error, setError] = useState(""),
     [stockOpen, setStockOpen] = useState(false),
     [override, setOverride] = useState<Order | null>(null);
+  const tablet = useKitchenTablet(r.outletId, r.data?.outlet.id === r.outletId ? r.data.orders : undefined);
   const stock = useResource<MenuData>(
-    `/api/menu?outlet=${r.outletId}`,
-    `/api/events?scope=menu&outlet=${r.outletId}`,
+    stockOpen ? `/api/menu?outlet=${r.outletId}` : null,
+    stockOpen ? `/api/events?scope=menu&outlet=${r.outletId}` : undefined,
   );
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -157,25 +163,29 @@ function Kitchen() {
       },
       {
         status: "READY",
-        label: "Ready for pickup",
+        label: "Ready for handoff",
         next: "HANDED_OFF",
         action: "Confirm handoff",
       },
+      { status: "HANDED_OFF", label: "Awaiting dispatch", next: "OUT_FOR_DELIVERY", action: "Mark out for delivery" },
+      { status: "OUT_FOR_DELIVERY", label: "Out for delivery", next: "DELIVERED", action: "Confirm delivered" },
     ],
-    orders = r.data?.orders || [];
+    orders = r.data?.orders || [],
+    visibleColumns = columns.filter((column) => !["HANDED_OFF", "OUT_FOR_DELIVERY"].includes(column.status)
+      || orders.some((order) => order.fulfillment === "delivery" && order.status === column.status));
   return (
     <div className="page kitchen-page">
       <div className="page-intro">
         <div>
           <p className="eyebrow">KITCHEN DISPLAY</p>
           <h1>Every order. In good hands.</h1>
-          <p>
-            <span className="status-dot" /> Updates automatically ·{" "}
-            {new Date(now).toLocaleTimeString("en-IN", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </p>
+          <div className="kitchen-connection">
+            <span className={`connection-chip connection-${r.connection}`} role="status" aria-live="polite">
+              <span aria-hidden="true" />
+              {r.connection === "live" ? "Live" : r.connection === "offline" ? "Offline" : r.connection === "connecting" ? "Connecting" : "Reconnecting"}
+            </span>
+            <span>Last synced {r.lastSynced ? new Date(r.lastSynced).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "—"}</span>
+          </div>
         </div>
         <div className="kitchen-toolbar">
           <OutletSelect
@@ -183,6 +193,12 @@ function Kitchen() {
             value={r.outletId}
             onChange={r.setSelected}
           />
+          <button className="button secondary" aria-pressed={tablet.sound === "on"} onClick={tablet.toggleSound}>
+            <Volume2 size={20} /> {tablet.sound === "on" ? "Sound on" : "Enable sound"}
+          </button>
+          <button className="button secondary" aria-pressed={tablet.wakeEnabled} onClick={tablet.toggleWake}>
+            <Monitor size={20} /> {tablet.awake ? "Screen awake" : tablet.wakeEnabled ? "Wake requested" : "Keep screen awake"}
+          </button>
           <button
             className="button secondary"
             onClick={() => setStockOpen(true)}
@@ -212,6 +228,13 @@ function Kitchen() {
           </button>
         </div>
       </div>
+      {tablet.notice && <p className="tablet-notice" role="status">{tablet.notice}</p>}
+      {r.connection !== "live" && !r.loading && (
+        <div className="kitchen-sync-warning" role="status">
+          <TriangleAlert size={24} /> {r.connection === "offline" ? "Offline — showing the last saved tickets. Actions are paused until the connection returns." : "Reconnecting — tickets may be out of date. Check the last synced time before taking action."}
+        </div>
+      )}
+      <p className="kitchen-legend"><span>Green · On time</span><span>Amber · Due within 5 minutes</span><span>Red · Overdue</span></p>
       {(r.error || error) && (
         <ErrorNotice message={error || r.error} retry={r.refresh} />
       )}{" "}
@@ -219,9 +242,9 @@ function Kitchen() {
         <Loading />
       ) : (
         <div className="kitchen-board">
-          {columns.map((column) => {
+          {visibleColumns.map((column) => {
             const list = orders
-              .filter((o) => o.status === column.status)
+              .filter((o) => o.status === column.status && (column.status !== "HANDED_OFF" || o.fulfillment === "delivery"))
               .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
             return (
               <section
@@ -236,19 +259,17 @@ function Kitchen() {
                 <div className="ticket-list">
                   {list.length ? (
                     list.map((order) => {
-                      const remaining = order.promisedAt
-                          ? Math.ceil(
-                              (new Date(order.promisedAt).getTime() - now) /
-                                60000,
-                            )
-                          : 0,
-                        late = remaining < 0 && column.status !== "READY",
+                      const urgency = kitchenUrgency(order.status, order.promisedAt, now),
+                        remaining = urgency.remaining,
+                        late = urgency.tone === "late",
+                        prepared = ["READY", "HANDED_OFF", "OUT_FOR_DELIVERY"].includes(column.status),
                         alert = order.messages.some((m) => m.kind === "LATE");
                       return (
                         <article
-                          className={`kitchen-ticket ${late ? "ticket-late" : ""}`}
+                          className={`kitchen-ticket ticket-${urgency.tone}`}
                           key={order.id}
                         >
+                          <div className="ticket-band"><strong>{urgency.label}</strong></div>
                           <div className="ticket-heading">
                             <strong>{order.number}</strong>
                             <span>
@@ -259,14 +280,13 @@ function Kitchen() {
                           </div>
                           <div className={`ticket-timer ${late ? "late" : ""}`}>
                             <Clock3 size={18} />
-                            {column.status === "READY"
-                              ? `Ready ${order.readyAt ? time(order.readyAt) : "now"}`
-                              : late
-                                ? `${Math.abs(remaining)} min overdue`
-                                : `${remaining} min to promise`}
+                            {prepared
+                              ? column.status === "OUT_FOR_DELIVERY" ? "Delivery in progress" : `Ready ${order.readyAt ? time(order.readyAt) : "now"}`
+                              : remaining === null ? "Check promised time"
+                                : late ? `${Math.abs(remaining)} min overdue` : `${remaining} min to promise`}
                             <small>Placed {time(order.createdAt)}</small>
                           </div>
-                          {alert && column.status !== "READY" && (
+                          {alert && !prepared && (
                             <div className="manager-alert">
                               <TriangleAlert size={15} /> Manager alert · 10+
                               min past promise
@@ -293,6 +313,9 @@ function Kitchen() {
                               Note: {order.note}
                             </div>
                           )}
+                          {order.fulfillment === "delivery" && (
+                            <div className="ticket-delivery"><strong>Delivery address</strong><p>{order.address}</p><p>{order.phone}</p></div>
+                          )}
                           <div className="ticket-total">
                             <span>
                               {order.lines.reduce((s, l) => s + l.quantity, 0)}{" "}
@@ -302,7 +325,7 @@ function Kitchen() {
                           </div>
                           <button
                             className="button primary full"
-                            disabled={busy === order.id}
+                            disabled={busy === order.id || r.connection === "offline"}
                             onClick={() => advance(order, column.next)}
                           >
                             {busy === order.id ? "Updating…" : column.action}
@@ -315,9 +338,10 @@ function Kitchen() {
                           {["ADMIN", "MANAGER"].includes(
                             app.user?.role || "",
                           ) &&
-                            column.status !== "READY" && (
+                            !prepared && (
                               <button
                                 className="text-button promise-button"
+                                disabled={r.connection === "offline"}
                                 onClick={() => setOverride(order)}
                               >
                                 Update promised time
@@ -353,6 +377,7 @@ function Kitchen() {
         title="Kitchen availability"
         description={`Changes apply to ${r.data?.outlet.name || r.outletId} and update the customer menu.`}
       >
+        {stock.loading && <Loading />}
         {stock.error && (
           <ErrorNotice message={stock.error} retry={stock.refresh} />
         )}{" "}
@@ -372,7 +397,7 @@ function Kitchen() {
               role="switch"
               aria-checked={item.inStock === true}
               aria-label={`${item.name} availability`}
-              disabled={busy === item.id}
+              disabled={busy === item.id || r.connection === "offline"}
               onClick={async () => {
                 setBusy(item.id);
                 try {
@@ -449,7 +474,7 @@ function Kitchen() {
             </label>
             <button
               className="button primary full"
-              disabled={busy === override.id}
+              disabled={busy === override.id || r.connection === "offline"}
             >
               Save new promise
             </button>
