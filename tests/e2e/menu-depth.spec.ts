@@ -91,3 +91,66 @@ test("personal reorder suggestions require an explicit cart action", async ({ pa
   await page.getByRole("dialog").getByRole("button", { name: /Add to order/ }).click();
   await expect(page.locator(".cart-line")).toHaveCount(1);
 });
+
+test("mobile reorder suggestions stay available and need an explicit customized add", async ({ browser, page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await demo(page.request, "customer");
+  const admin = await browser.newContext({ baseURL: origin });
+  await demo(admin.request, "admin");
+  const menu = await (await page.request.get("/api/menu?outlet=kondapur")).json();
+  const originalStock = menu.items.find((item: { id: string }) => item.id === "chicken-biryani").inStock;
+  const stock = async (available: boolean) => {
+    expect((await admin.request.patch("/api/staff/availability", { headers: { origin }, data: {
+      outletId: "kondapur", itemId: "chicken-biryani", available,
+    } })).ok()).toBeTruthy();
+  };
+  try {
+    const history = await (await page.request.get("/api/orders")).json();
+    expect(history.orders.some((order: { outletId: string; paymentStatus: string; lines: { itemId: string }[] }) =>
+      order.outletId === "kondapur" && order.paymentStatus === "PAID" && order.lines.some(line => line.itemId === "chicken-biryani"),
+    )).toBe(true);
+    await page.goto("/");
+    const section = page.getByRole("region", { name: "Order again suggestions" });
+    const chooseChicken = section.getByRole("button", { name: "Choose Chicken dum biryani again", exact: true });
+    await expect(section).toBeVisible();
+    await expect(page.locator(".cart-line")).toHaveCount(0);
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await chooseChicken.scrollIntoViewIfNeeded();
+      await expect(chooseChicken).toBeInViewport();
+      const target = await chooseChicken.boundingBox();
+      expect(target!.width).toBeGreaterThanOrEqual(44);
+      expect(target!.height).toBeGreaterThanOrEqual(44);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await stock(false);
+    await page.reload();
+    await expect(section).toBeVisible();
+    await expect(chooseChicken).toHaveCount(0);
+    await expect(section.getByRole("button", { name: "Choose Double ka meetha again", exact: true })).toBeVisible();
+    await expect(page.locator(".cart-line")).toHaveCount(0);
+    const availableMenu = await (await page.request.get("/api/menu?outlet=kondapur")).json();
+    const availableNames = availableMenu.items.filter((item: { available: boolean }) => item.available).map((item: { name: string }) => item.name);
+    for (const name of await section.locator(".reorder-item strong").allTextContents())
+      expect(availableNames).toContain(name.trim());
+
+    await stock(true);
+    await page.reload();
+    await chooseChicken.scrollIntoViewIfNeeded();
+    mkdirSync(".local/screenshots", { recursive: true });
+    await page.screenshot({ path: ".local/screenshots/mobile-reorder.png", animations: "disabled" });
+    await chooseChicken.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: /Family pack · serves 3–4/ }).click();
+    await expect(page.locator(".cart-line")).toHaveCount(0);
+    await dialog.getByRole("button", { name: /Add to order/ }).click();
+    await expect(page.locator(".cart-line")).toHaveCount(1);
+    await expect(page.locator(".cart-line")).toContainText("Chicken dum biryani");
+    await expect(page.locator(".cart-line")).toContainText("Family pack");
+  } finally {
+    await stock(originalStock);
+    await admin.close();
+  }
+});

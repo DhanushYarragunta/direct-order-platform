@@ -114,16 +114,35 @@ const promised = (raw: number, minimum: number) => Math.max(Math.ceil(minimum), 
 export function learnedPreparationEstimate(
   input: PreparationInputs, history: PreparationSample[], now = new Date(), allowLearning = true,
 ): PreparationPrediction {
+  return preparationEstimateFromHistory(input, history, now, allowLearning, {
+    source: "live", modelVersion: MODEL_VERSION, ruleVersion: "rules-v1",
+  });
+}
+
+// Synthetic examples have a separate entry point and provenance. They can never
+// pass through the live estimator, even if a caller combines both histories.
+export function syntheticPreparationEstimate(
+  input: PreparationInputs, history: PreparationSample[], now: Date,
+): PreparationPrediction {
+  return preparationEstimateFromHistory(input, history, now, true, {
+    source: "synthetic-demo", modelVersion: "demo-ridge-prep-v1", ruleVersion: "demo-rules-v1",
+  });
+}
+
+function preparationEstimateFromHistory(
+  input: PreparationInputs, history: PreparationSample[], now: Date, allowLearning: boolean,
+  profile: { source: "live" | "synthetic-demo"; modelVersion: string; ruleVersion: string },
+): PreparationPrediction {
   const safe = baseline(input);
   let samples: PreparationSample[] = [];
   let validationMae: number | null = null, baselineMae: number | null = null;
   const fallback = (reason: string): PreparationPrediction => ({
     minutes: safe.minutes, rawMinutes: safe.minutes, fallback: true,
-    modelVersion: `rules-v1:${reason}`, trainingSamples: samples.length, validationMae, baselineMae,
+    modelVersion: `${profile.ruleVersion}:${reason}`, trainingSamples: samples.length, validationMae, baselineMae,
   });
   if (!validInputs(input)) return fallback("invalid-input");
   if (!allowLearning) return fallback("demo-or-test-payment");
-  samples = history.filter((sample) => sample.source === "live" && validInputs(sample)
+  samples = history.filter((sample) => sample.source === profile.source && validInputs(sample)
     && Number.isFinite(sample.actualMinutes) && sample.actualMinutes >= 1 && sample.actualMinutes <= 180
     && Number.isFinite(sample.placedAt.getTime()) && Number.isFinite(sample.completedAt.getTime())
     && sample.placedAt.getTime() >= now.getTime() - MAX_HISTORY_AGE_MS
@@ -158,7 +177,7 @@ export function learnedPreparationEstimate(
     sample.placedAt.toISOString(), sample.completedAt.toISOString(), ...features(sample), sample.minimum, sample.actualMinutes,
   ]))).digest("hex").slice(0, 12);
   return { minutes: promised(rawMinutes, input.minimum), rawMinutes, fallback: false,
-    modelVersion: `${MODEL_VERSION}:${digest}`, trainingSamples: samples.length, validationMae, baselineMae };
+    modelVersion: `${profile.modelVersion}:${digest}`, trainingSamples: samples.length, validationMae, baselineMae };
 }
 
 export function preparationSampleFromOrder(order: {

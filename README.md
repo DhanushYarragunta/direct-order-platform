@@ -6,14 +6,14 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 
 ### Customer ordering
 
-- Browse dishes with dietary information, allergens, portions and add-ons.
+- Browse 60 dishes across nine categories with dietary information, allergens, portions and add-ons.
 - Choose delivery by GPS or supported locality with automatic outlet routing.
 - Review preparation estimates, delivery charges, coupons and loyalty discounts before payment.
 - Pay through Razorpay hosted checkout, with signed webhook verification and automatic reconciliation.
 - Download itemized PDF payment receipts and track confirmed or pending refunds.
-- Sign in with email or SMS codes; verify contacts for transactional order updates.
+- Sign in with email or mobile number and a password. Codes are reserved for signup, password recovery and contact verification.
 - Track orders through preparation, handoff and delivery completion.
-- View order history, reorder favourites and submit party-order requests.
+- View order history, choose available favourites from mobile reorder cards and submit party-order requests. Reordering still requires reviewing options and explicitly adding to the cart.
 
 ### Kitchen operations
 
@@ -30,6 +30,7 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 - Monitor payment recovery, pending refunds and notification delivery status.
 - Inspect worker activity, failed or stalled tasks, queue ages and payment recovery references.
 - Measure checkout duration, 30-day retention cohorts and direct-order adoption against aggregate app-order baselines.
+- Explore preparation estimates, fallback reasons, manager overrides and late-message previews in the Admin/Manager AI workspace (`/workspace/ai`).
 
 ### Accounts and privacy
 
@@ -91,15 +92,21 @@ Use `npm run db:stop` to stop the project database.
 
 Additional settings are documented in [launch operations](docs/LAUNCH_OPERATIONS.md).
 
-### Demo access
+### Local demo access
 
-With `DEMO_MODE=true`, visit `/login` and select **Customer**, **Admin**, **Manager** or an outlet's **Kitchen** account. Email/password registration and sign-in are also available.
+In the local/demo environment with `DEMO_MODE=true`, visit `/login` and select **Customer**, **Admin**, **Manager** or an outlet's **Kitchen** account. Ordinary sign-in uses email/mobile plus password; signup verifies email by code. The hosted judges account is `judge@deccan.example`, with its password supplied privately. Shared local demo shortcuts remain disabled on that host.
 
-Demo mode provides simulated services and sample accounts. Hosted Razorpay test checkout is also supported. Live payments and messages require provider configuration and approved sender/merchant accounts. Preparation estimates train a small model on eligible completed live orders, with chronological validation and a kitchen-load fallback until sufficient evidence is available. Seeded licence numbers and customer records are sample data.
+Demo mode provides simulated services and sample accounts. Preparation estimates learn from 300 explicitly synthetic examples held in memory, with separate `demo-ridge-prep-v1` and `demo-rules-v1` versions. This also works with the existing explicitly enabled public Razorpay test checkout. No synthetic orders are inserted into the database or mixed into live training.
+
+Admins and managers can open `/workspace/ai` to compare the current queue with busy, limited-history and unusual-load scenarios, preview an override that respects the kitchen minimum, or simulate ten minutes late. The customer/manager message log is preview-only: scenarios send and save nothing. Synthetic evaluation errors do not measure restaurant accuracy. Checkout and tracking identify learned demo estimates, live estimates, fallbacks and manager updates.
+
+Live learning still requires at least 60 qualifying completed orders, chronological validation and improvement over the kitchen-load baseline. Live payments and messages require provider configuration and approved sender/merchant accounts. Seeded licence numbers and customer records are sample data.
 
 See [live payments, OTP and messaging setup](docs/LIVE_SERVICES.md) for AWS configuration, Razorpay webhooks, cost controls and launch verification.
 
 ## Verification
+
+Local verification on **8 November 2026** passed **196 unit tests, 112 database integration tests and 38 browser scenarios** (33 core, one hosted-checkout fixture and four registration/recovery scenarios), plus TypeScript and the production build. CI and deployment of this AI/mobile revision remain pending.
 
 | Command | Purpose |
 | --- | --- |
@@ -112,7 +119,7 @@ See [live payments, OTP and messaging setup](docs/LIVE_SERVICES.md) for AWS conf
 | `npm run test:performance` | Local throughput and automated checkout smoke tests |
 | `npm run test:soak` | Five-minute sustained local load test |
 
-Local verification on **8 November 2026** passed **162 unit tests, 107 database tests and 33 browser scenarios** (28 core, one hosted-checkout fixture and four non-demo signup/recovery scenarios), along with TypeScript and the production build. The isolated test databases apply all seven migrations. The checks include the 60-dish menu, nine category filters, email/mobile password login, 15-day sessions, OTP password reset with session revocation, webhook recovery and refund diagnostics. Payment, email and SMS calls in these automated suites were intercepted or mocked; these checks do not establish live provider activation. SMS recovery requires configured messaging; the current AWS SMS account has no approved sender setup.
+The preceding verified release on **8 November 2026** passed **162 unit tests, 107 database tests and 33 browser scenarios** (28 core, one hosted-checkout fixture and four non-demo signup/recovery scenarios), along with TypeScript and the production build. The isolated test databases apply all seven migrations. The checks include the 60-dish menu, nine category filters, email/mobile password login, 15-day sessions, OTP password reset with session revocation, webhook recovery and refund diagnostics. Payment, email and SMS calls in these automated suites were intercepted or mocked; these checks do not establish live provider activation. SMS recovery requires configured messaging; the current AWS SMS account has no approved sender setup.
 
 Separate provider checks confirmed a Razorpay test capture and receipt of an SES test email. The test refund is still pending after a provider HTTP 400 refusal, and SES remains in its verified-recipient sandbox. See [release readiness](docs/RELEASE_READINESS.md) for the current hosted configuration and approval-dependent activation steps.
 

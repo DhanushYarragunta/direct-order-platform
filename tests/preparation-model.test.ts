@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { estimatePreparation } from "../src/lib/domain";
-import { learnedPreparationEstimate, preparationHour, preparationSampleFromOrder,
+import { learnedPreparationEstimate, preparationHour, preparationSampleFromOrder, syntheticPreparationEstimate,
   type PreparationInputs, type PreparationSample } from "../src/lib/preparation-model";
 
 const now = new Date("2026-11-05T18:00:00Z");
@@ -47,6 +47,15 @@ describe("bounded history-trained preparation predictor", () => {
     expect(preparationSampleFromOrder({ workMinutes: 30, placedAt: now, readyAt: now,
       estimateSource: null, estimateQueueWork: null, estimateStations: null,
       estimateMinimumMinutes: null, estimateHour: null })).toBeNull();
+  });
+
+  it("keeps synthetic and live training sources separate even in a mixed history", () => {
+    const realHistory = history();
+    const synthetic = realHistory.map((sample) => ({ ...sample, source: "synthetic-demo" }));
+    expect(learnedPreparationEstimate(inputs, synthetic, now).trainingSamples).toBe(0);
+    expect(syntheticPreparationEstimate(inputs, realHistory, now).trainingSamples).toBe(0);
+    expect(learnedPreparationEstimate(inputs, [...realHistory, ...synthetic], now)).toEqual(learnedPreparationEstimate(inputs, realHistory, now));
+    expect(syntheticPreparationEstimate(inputs, [...synthetic, ...realHistory], now)).toEqual(syntheticPreparationEstimate(inputs, synthetic, now));
   });
 
   it("keeps the rule when it is as accurate as the proposed model", () => {

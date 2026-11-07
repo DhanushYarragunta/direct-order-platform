@@ -12,6 +12,7 @@ import {
   MapPin,
   CalendarHeart,
   Settings,
+  BrainCircuit,
 } from "lucide-react";
 import { useApp } from "./provider";
 import { request } from "@/lib/client";
@@ -24,6 +25,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     ? [
         { href: "/workspace", label: "Overview", icon: LayoutDashboard },
         { href: "/kitchen", label: "Kitchen display", icon: ChefHat },
+        ...(["ADMIN", "MANAGER"].includes(app.user?.role || "")
+          ? [{ href: "/workspace/ai", label: "AI & automation", icon: BrainCircuit }]
+          : []),
         ...(app.user?.role === "ADMIN"
           ? [{ href: "/workspace/menu", label: "Menu manager", icon: BookOpen },
              { href: "/workspace/services", label: "Services", icon: Settings }]
@@ -59,6 +63,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               key={href}
               href={href}
               aria-label={label}
+              title={label}
               className={`nav-link ${path === href ? "active" : ""}`}
             >
               <Icon size={19} />
@@ -129,6 +134,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     ? "Payment"
                     : path === "/kitchen"
                       ? "Kitchen display"
+                      : path.includes("workspace/ai")
+                        ? "AI & automation"
                       : path.includes("workspace/services")
                         ? "Payments & communications"
                       : path.includes("workspace/menu")

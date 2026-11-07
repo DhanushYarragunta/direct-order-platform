@@ -28,6 +28,7 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   vi.stubEnv("PAYMENT_PROVIDER", "razorpay"); vi.stubEnv("DEMO_MODE", "true");
+  vi.stubEnv("ALLOW_PUBLIC_TEST_PAYMENTS", "false");
   vi.stubEnv("RAZORPAY_KEY_ID", "rzp_test_fixture"); vi.stubEnv("RAZORPAY_KEY_SECRET", "fixture-secret");
   vi.stubEnv("RAZORPAY_WEBHOOK_SECRET", "fixture-webhook");
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Unexpected external request in test")));
@@ -65,8 +66,9 @@ describe.sequential("Razorpay database lifecycle with mocked provider transport"
     expect((await getOrder(order.id, customer)).status).toBe("PLACED");
   });
 
-  it("records payment-time features but excludes test payments from learned history", async () => {
+  it("uses an explicitly synthetic model in demo mode and keeps payment features out of live history", async () => {
     const { order, remote } = await fixture();
+    const ordersBefore = await db.order.count();
     await applyGatewayPayment(remote);
     const saved = await getOrder(order.id, customer);
     expect(saved.estimateSource).toBe("demo");
@@ -75,7 +77,36 @@ describe.sequential("Razorpay database lifecycle with mocked provider transport"
     expect(saved.estimateMinimumMinutes).toBe(saved.outlet.minPrepMinutes);
     expect(saved.estimateHour).toBeGreaterThanOrEqual(0);
     expect(saved.estimateHour).toBeLessThan(24);
+    expect(saved.estimateModelVersion).toMatch(/^demo-ridge-prep-v1:/);
+    expect(saved.estimateFallback).toBe(false);
+    expect(saved.estimateTrainingSamples).toBe(300);
+    expect(saved.estimateValidationMae).toBeLessThan(saved.estimateBaselineMae!);
+    expect(await db.order.count()).toBe(ordersBefore);
+  });
+
+  it("uses the synthetic model for explicitly enabled public test payments", async () => {
+    vi.stubEnv("DEMO_MODE", "false"); vi.stubEnv("ALLOW_PUBLIC_TEST_PAYMENTS", "true");
+    const { order, remote } = await fixture();
+    expect(order.estimateModelVersion).toMatch(/^demo-ridge-prep-v1:/);
+    await applyGatewayPayment(remote);
+    const saved = await getOrder(order.id, customer);
+    expect(saved.estimateSource).toBe("demo");
+    expect(saved.payments[0].testMode).toBe(true);
+    expect(saved.estimateModelVersion).toMatch(/^demo-ridge-prep-v1:/);
+    expect(saved.estimateFallback).toBe(false);
+    expect(saved.estimateMinutes).toBeGreaterThanOrEqual(saved.outlet.minPrepMinutes);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps the baseline for test payments without either demo opt-in", async () => {
+    vi.stubEnv("DEMO_MODE", "false"); vi.stubEnv("ALLOW_PUBLIC_TEST_PAYMENTS", "false");
+    const { order, remote } = await fixture();
+    expect(order.estimateModelVersion).toBe("rules-v1:demo-or-test-payment");
+    await applyGatewayPayment(remote);
+    const saved = await getOrder(order.id, customer);
+    expect(saved.estimateSource).toBe("demo");
     expect(saved.estimateModelVersion).toBe("rules-v1:demo-or-test-payment");
+    expect(saved.estimateFallback).toBe(true);
     expect(saved.estimateTrainingSamples).toBe(0);
   });
 
@@ -84,6 +115,7 @@ describe.sequential("Razorpay database lifecycle with mocked provider transport"
     // Only the transport fixture uses this fake live-looking key. Fetch remains
     // blocked, and the isolated database is discarded after the test suite.
     vi.stubEnv("DEMO_MODE", "false"); vi.stubEnv("RAZORPAY_KEY_ID", "rzp_live_fixture_never_send");
+    vi.stubEnv("ALLOW_PUBLIC_TEST_PAYMENTS", "true");
     await applyGatewayPayment(remote);
     const saved = await getOrder(order.id, customer);
     expect(saved.estimateSource).toBe("live");

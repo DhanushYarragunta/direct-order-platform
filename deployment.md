@@ -4,7 +4,7 @@
 
 Project repository: https://github.com/DhanushYarragunta/direct-order-platform
 
-The application has a local review environment and an existing public Render deployment. The live-service release must be verified and deployed to both web and worker before the hosted app can be treated as current. Follow `docs/RENDER.md` for upgrades and controlled staging; the root `render.yaml` retains safe public-demo settings. Check the actual GitHub Actions result and the deployed commit for each service instead of assuming local edits are published.
+The application has a local review environment and an existing public Render deployment. The AI/mobile revision passed local TypeScript/build, 196 unit tests, 112 integration tests and 38 browser scenarios. Its CI and deployment remain pending. The last verified hosted commit is recorded in `docs/RELEASE_READINESS.md`; local edits do not update that release. Follow `docs/RENDER.md` for upgrades and controlled staging; the root `render.yaml` retains safe public-demo settings. Check the actual GitHub Actions result and the deployed commit for each service instead of assuming local edits are published.
 
 ## Local steps
 
@@ -31,9 +31,9 @@ For an existing PostgreSQL instance, copy `.env.example` to `.env` and supply yo
 
 The test runner sets its own temporary database and app origin. `CORE_TEST_DATABASE` and `CORE_INTEGRATION` are internal test safeguards, not deployment variables.
 
-## Demo access for a reviewer
+## Local/demo access for a reviewer
 
-Open `/login` and choose one of the labelled demo accounts. No shared password needs to be placed in this document.
+The accounts below are seeded for local/demo review with `DEMO_MODE=true`; open `/login` and choose a labelled role. They are not the hosted login credentials. The hosted judges account is `judge@deccan.example`, with the password supplied privately; shared demo shortcuts remain disabled there. Normal sign-in uses email/mobile plus password. OTP is limited to signup, password recovery and contact verification.
 
 | Account | Access |
 | --- | --- |
@@ -45,6 +45,14 @@ Open `/login` and choose one of the labelled demo accounts. No shared password n
 | Kukatpally kitchen / `kukatpally@deccan.example` | Kukatpally kitchen tickets and availability |
 
 Use separate browser profiles or an incognito window to review customer and staff flows simultaneously. A browser profile has one current account. The demo is intentionally accessible when enabled; do not use these shortcuts as production access control.
+
+## AI demonstration configuration
+
+The synthetic preparation model and `/workspace/ai` use existing configuration: either `DEMO_MODE=true`, or all of `ALLOW_PUBLIC_TEST_PAYMENTS=true`, `PAYMENT_PROVIDER=razorpay` and a Razorpay test key. No external model service, new credential, migration or training seed is required. Existing public-test authentication remains unchanged; the AI page requires ADMIN or MANAGER, with outlet scope enforced.
+
+The 300 synthetic training examples stay in memory. Scenario evaluation reads the current queue and returns preview-only estimates and messages; it creates no orders, sends/saves no messages and changes no cloud or provider settings. Real estimates retain the separate live-history gate. Actual late notifications depend on a running host/worker and configured delivery providers; free hosting can pause background work while asleep.
+
+The production build and local suites have passed; exact totals are recorded in `docs/RELEASE_READINESS.md`. To reproduce them, run the existing isolated integration/browser suites with port 3001 free. CI and deployment remain pending.
 
 ## Hosting and release verification
 
@@ -59,20 +67,21 @@ For deployment commands, Docker/Compose, explicit public-demo opt-in, uploads pe
 ## Review the extended features
 
 - Customer: order two regular biryanis, apply BIRYANI10, select loyalty points and pay. Cancel while the order is PLACED to verify points return. WELCOME100 requires a new registered customer; the existing demo customer has paid history.
+- AI workspace: as Admin or Manager, open `/workspace/ai`; compare full/limited synthetic history, unusual-load fallback, minimum-respecting overrides and ten-minute late-message previews. Nothing is sent or saved. On mobile, choose a reorder suggestion and verify the cart changes only after explicit Add.
 - Customer party orders: send a request at least 24 hours ahead. Sign in as Manager for Kondapur (or Admin for any outlet), open Party requests and confirm with details. The customer sees the response.
 - Menu manager: edit a dish, add a Hyderabad city override, or set serving days and hours in IST. The kitchen stock switch remains independent of the serving schedule.
 - Overview: compare kitchen rows and change the reporting period. Repeat customers means two paid orders within that period. The Business targets section separately reports 30-day cohorts and checkout timing, and lets managers enter aggregate app-order baselines for matching periods.
 
 Generated outputs are ignored, not tracked. `npm run package:source` creates a small ZIP from committed source only. The optional technical design PDF and this file can be packaged in `output/submission.zip` (two files, under 25 MB). PDF source is `docs/TECHNICAL_DESIGN.md`; run `python scripts/build-tdd.py` with ReportLab and Pillow after browser verification to regenerate both the PDF and ZIP together. The builder validates the ZIP contents and size; visually inspect the resulting PDF before submission.
 
-## Quality verification (5 November 2026)
+## Quality verification
 
-The repository includes `/api/health`, strict nonce CSP/HSTS, demo phone OTP, privacy controls, seven dishes, secure photo uploads, delivery completion, fees/localities, prepayment wait estimates, large tablet tickets, connection states and business-target metrics. See the README for the latest recorded local verification and `docs/ACCEPTANCE_TESTING.md` for physical readability, human timing and sustained staging validation. Recheck the deployed release independently.
+The repository includes `/api/health`, strict nonce CSP/HSTS, email/mobile password sign-in, signup/recovery/contact-verification codes, privacy controls, 60 dishes across nine categories, secure photo uploads, delivery completion, fees/localities, prepayment wait estimates, large tablet tickets, connection states and business-target metrics. See the README for the latest recorded local verification and `docs/ACCEPTANCE_TESTING.md` for physical readability, human timing and sustained staging validation. Recheck the deployed release independently.
 
 
 ## Live services
 
-The code supports Razorpay hosted checkout, PDF payment receipts, email/SMS OTP and transactional notifications. Amazon SES and AWS End User Messaging are the default messaging adapters; Resend/Twilio are optional. Follow [the live service guide](docs/LIVE_SERVICES.md) and set the named variables from `.env.example` in both the web and worker environments. Compose propagates these settings to both processes; an AWS-hosted workload should use an IAM role instead of copied credentials.
+The code supports Razorpay hosted checkout, PDF payment receipts, password sign-in, signup/recovery/contact-verification codes and transactional notifications. Amazon SES and AWS End User Messaging are the default messaging adapters; Resend/Twilio are optional. Follow [the live service guide](docs/LIVE_SERVICES.md) and set the named variables from `.env.example` in both the web and worker environments. Compose propagates these settings to both processes; an AWS-hosted workload should use an IAM role instead of copied credentials.
 
 The existing Render blueprint deliberately remains a demo deployment. AWS credits do not pay Render fees or Razorpay transaction fees. Using AWS for email/SMS does not itself deploy the web application to AWS.
 

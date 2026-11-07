@@ -22,11 +22,20 @@ export async function request<T>(
     cache: "no-store",
     signal,
   });
-  const json = await response
-    .json()
-    .catch(() => ({ error: "The server could not complete the request" }));
-  if (!response.ok)
-    throw new ApiError(json.error || "Please try again", response.status);
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch (error) {
+    // A cancelled body read must keep its original cancellation. Other invalid
+    // replies are errors even when the server already sent successful headers.
+    if (signal?.aborted) throw error;
+    throw new ApiError("The server returned an invalid response. Please try again.", response.status);
+  }
+  if (!response.ok) {
+    const message = json !== null && typeof json === "object" && "error" in json && typeof json.error === "string"
+      ? json.error : "Please try again";
+    throw new ApiError(message || "Please try again", response.status);
+  }
   return json as T;
 }
 export type ConnectionState = "connecting" | "live" | "reconnecting" | "offline";

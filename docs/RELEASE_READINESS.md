@@ -1,5 +1,15 @@
 # Release readiness — 8 November 2026
 
+## AI demonstration revision — locally verified, CI/deployment pending
+
+Implementation now includes a mobile-visible reorder strip, honest checkout/tracking estimate explanations, and an ADMIN/MANAGER AI workspace at `/workspace/ai`. The workspace reads the current queue and previews full/20-example history, busy/unusual loads, kitchen minimums, manager overrides and ten-minute late alerts. Its customer/manager message log is preview-only; scenarios send/save no messages, create no orders and change no operational promises.
+
+The demo estimator trains on 300 explicitly synthetic records held only in memory, with separate `demo-ridge-prep-v1` / `demo-rules-v1` provenance. It runs in demo mode or the existing explicitly enabled Razorpay public-test configuration. It inserts no fake training orders and cannot contaminate live history; live learning still requires at least 60 qualifying completed records. Synthetic holdout errors are not restaurant accuracy measurements.
+
+Local verification on **8 November 2026** passed **196 unit tests, 112 database integration tests and 38 browser scenarios** (33 core, one hosted-checkout fixture and four registration/recovery scenarios), plus TypeScript and the production build. CI and deployment of this AI/mobile revision remain pending. All seven migrations were applied in isolated test databases. The browser suite covers AI scenarios and recovery, access/outlet scope, learned-demo checkout wording and mobile reorder behavior. Provider transport remained intercepted or mocked; scenario previews sent no external messages.
+
+No cloud settings or external messaging configuration were changed for this revision. The verified commit and counts below describe the preceding hosted release.
+
 ## Current verified release
 
 Commit **`de354569c052cfa6eabfc1b86ae87d752171be4f`** deployed successfully in Render deployment **`dep-dbno6jgae00c738vmtl0`**. All **seven migrations** are applied, including `20261108010000_password_recovery`.
@@ -12,7 +22,7 @@ The exact deployed commit passed [GitHub Actions run 42408895843](https://github
 
 The earlier release passed 152 unit tests, 87 isolated database tests, 28 core browser scenarios, one hosted-checkout browser fixture and two non-demo registration browser scenarios. TypeScript, the production build and the Linux ARM64 Docker build passed. Provider fixtures do not send messages or move money. Six migrations were applied locally at that checkpoint.
 
-Those fixes prevent immediate webhook retries in non-UTC database sessions, show failed/blocked webhook updates to administrators, preserve refund failure details until every affected payment is reconciled, and remount signup/code-login inputs when switching steps so password or OTP text cannot become a contact field.
+Those fixes prevent immediate webhook retries in non-UTC database sessions, show failed/blocked webhook updates to administrators, preserve refund failure details until every affected payment is reconciled, and remount the then-existing signup/code-login inputs when switching steps so password or OTP text cannot become a contact field.
 
 GitHub Actions also passed for release commit `d4a0bdd55bc983f3e3d9f9e624eab9114814d75d`: [run 42403715322](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42403715322), job `128496801624`, completed **8 November 2026 at 00:33:07 IST**. TypeScript/tests/build, isolated database and core browser checks, hosted-checkout fixtures, non-demo registration fixtures and the deployment-image build all succeeded.
 

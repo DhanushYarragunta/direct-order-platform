@@ -18,6 +18,7 @@ import { Empty, ErrorNotice, Loading } from "./ui";
 import type { CheckoutQuote } from "@/lib/types";
 import { DELIVERY_LOCALITIES, deliveryOutlet } from "@/lib/delivery";
 import { checkoutStart } from "@/lib/checkout-timing";
+import { preparationExplanation } from "@/lib/preparation-explanation";
 import "./rewards.css";
 
 export function CheckoutScreen() {
@@ -240,7 +241,7 @@ export function CheckoutScreen() {
                 <strong>{app.menu.data?.outlet.name}</strong>
                 <p>{app.menu.data?.outlet.address}</p>
                 <p role="status"><strong>{quote ? `Estimated preparation: ${quote.estimateMinutes} min` : fulfillment === "delivery" && !hasLocation ? "Choose your delivery locality to see the wait." : "Checking the kitchen wait…"}</strong></p>
-                {quote && <small>Based on your dishes and current kitchen load · minimum {quote.minimumMinutes} min. Refreshed every 30 seconds; confirmed on payment. Preparation excludes travel time.</small>}
+                {quote && <small>{preparationExplanation(quote)} Minimum {quote.minimumMinutes} min. Refreshed every 30 seconds; confirmed on payment. Travel time is additional.</small>}
                 {fulfillment === "delivery" && <p>Delivery minimum {money(app.menu.data.outlet.minDeliveryPaise)}. Fee {money(app.menu.data.outlet.deliveryFeePaise)}; free from {money(app.menu.data.outlet.freeDeliveryAbovePaise)} before discounts. Demo policy.</p>}
               </div>
             </div>

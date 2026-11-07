@@ -19,6 +19,7 @@ import { notificationDeliveries } from "./notifications";
 import { paymentProvider } from "./razorpay";
 import { learnedPreparationEstimate, MAX_PREPARATION_HISTORY, preparationHour, preparationSampleFromOrder,
   type PreparationPrediction, type PreparationSample } from "./preparation-model";
+import { demoPrediction, demoPreparationEnabled } from "./preparation-demo";
 
 export async function resolveCheckoutOutlet(tx: Prisma.TransactionClient, input: DeliveryLocation & { outletId: string; fulfillment?: string }) {
   if (input.fulfillment === "delivery") {
@@ -49,6 +50,7 @@ async function preparationQuote(tx: Prisma.TransactionClient, outlet: { id: stri
   });
   const inputs = { workMinutes, queueWork: queue._sum.workMinutes || 0, minimum: outlet.minPrepMinutes,
     stations: outlet.activeStations, hour: preparationHour(now) };
+  if (!allowLearning && demoPreparationEnabled()) return { ...demoPrediction(inputs), inputs };
   const rows = allowLearning ? await tx.order.findMany({
     where: { outletId: outlet.id, estimateSource: "live", paymentStatus: "PAID", status: { not: "CANCELLED" },
       placedAt: { gte: new Date(now.getTime() - 90 * 86400_000) }, readyAt: { not: null, lte: now } },

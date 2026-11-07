@@ -23,6 +23,7 @@ import { Empty, ErrorNotice, FoodPhoto, Loading } from "./ui";
 import { RewardsWallet } from "./rewards-wallet";
 import { GatewayPayment } from "./gateway-payment";
 import { finishCheckoutTiming } from "@/lib/checkout-timing";
+import { preparationExplanation } from "@/lib/preparation-explanation";
 
 export const time = (value: string) =>
   new Date(value).toLocaleTimeString("en-IN", {
@@ -211,7 +212,7 @@ export function PaymentScreen({ id, paymentProvider, gatewayConfigured, gatewayT
         </p>
         <div className="payment-amount">{money(order.totalPaise)}</div>
         <span className="muted">Includes {money(order.gstPaise)} GST</span>
-        {order.estimateMinutes && <p className="pending-notice"><Clock3 size={20} /> Estimated preparation: {order.estimateMinutes} min. This estimate includes the kitchen load at checkout; it is confirmed when payment succeeds. Travel time is additional.</p>}
+        {order.estimateMinutes && <p className="pending-notice"><Clock3 size={20} /><span>Estimated preparation: {order.estimateMinutes} min. {preparationExplanation(order)} Confirmed when payment succeeds. Travel time is additional.</span></p>}
         {order.fulfillment === "delivery" && <p>Delivery fee: {order.deliveryFeePaise ? money(order.deliveryFeePaise) : "Free"} · included in your total.</p>}
         {order.status === "CANCELLED" ? (
           <ErrorNotice
@@ -393,9 +394,7 @@ export function OrderScreen({ id }: { id: string }) {
                   </span>
                   <h2>{time(order.readyAt || order.promisedAt)}</h2>
                   <p>
-                    {order.estimateFallback
-                      ? "Based on your meal and current kitchen load."
-                      : "Based on recent preparation times and current kitchen load."}
+                    {order.readyAt ? "Preparation completed by the kitchen." : preparationExplanation(order)}
                   </p>
                 </div>
               </div>
