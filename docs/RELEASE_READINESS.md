@@ -26,6 +26,12 @@ The final CI run above covers all category filters, phone/password login, persis
 
 The owner clarified that this is a demonstration project and has no existing SMS sender/provider setup. Read-only AWS inspection found `ap-south-1` SMS account tier **SANDBOX**, with **no registrations and no sender IDs**. SMS recovery is implemented and tested with mocked AWS/Twilio transports; real SMS is unavailable and no SMS enablement was applied. The new interface reports SMS recovery unavailable and offers verified-email recovery. Password-reset codes are never displayed or faked. SES remains sandboxed with its existing verified-recipient restriction, and the public Render database remains in non-demo authentication mode.
 
+## Completed judges' administrator setup
+
+At the owner's explicit request, **Judging Demo Admin** (`judge@deccan.example`) was provisioned as one `ADMIN` account in the existing Render database. The reserved `.example` address is a password-login identifier only. Verified-contact fields remain unset, and this account's password login does not require email OTP. Provisioning was limited to the new account; existing users, orders, menu, outlets and configuration were preserved.
+
+Live password login returned HTTP 200 with the `ADMIN` role and a **15-day Secure, HttpOnly session cookie**. Authenticated `/api/auth/me`, `/api/admin/menu` (60 items, three outlets), `/api/admin/outlets` and `/api/admin/services` all returned HTTP 200; anonymous `/api/admin/menu` returned HTTP 401. The API verification session was logged out. A separate browser sign-in reached the management dashboard without OTP and was left open for the owner. Initial administrator setup is complete; the password is not recorded here.
+
 ## Initial Render inspection — before the update
 
 Inspection found workspace **My Workspace**, project **My project**, environment **Production**, web service **direct-order-platform** (`srv-dbmb46gu01pc738tcodg`) and existing PostgreSQL 16 database **direct-order-db** (`dpg-dbmb6e2jnfac738v3g0g-a`) in Singapore. The database is currently ungrouped. No separate worker is provisioned.
@@ -49,7 +55,7 @@ The earlier Render deployment **`dep-dbnn8hng6t6s73cdb0dg`** succeeded on commit
 
 Immediately after deployment, the menu API returned HTTP 404 because migrations created the schema without business records. The owner subsequently approved the reviewed catalogue, and that approved payload was imported into the existing Render database over a TLS connection with certificate verification (`verify-full`). The import inserted **33 records: three outlets, seven menu items, two add-ons and 21 outlet-availability rows**. It did not create customers, administrators, orders or licence-verification declarations.
 
-The reported homepage/menu failure is now resolved: the approved catalogue renders and the cart displays the expected ₹320 price. These checks establish browsing and cart behaviour; they do not establish completed hosted signup, message delivery, payment recovery or end-to-end ordering acceptance. Initial administrator setup remains pending separate identity approval.
+The reported homepage/menu failure is now resolved: the approved catalogue renders and the cart displays the expected ₹320 price. These checks establish browsing and cart behaviour; they do not establish completed hosted signup, message delivery, payment recovery or end-to-end ordering acceptance. Initial administrator setup was pending separate identity approval at this checkpoint; the subsequently approved judges' account is recorded above.
 
 Render's database UI warns that the current **Free PostgreSQL database expires on 5 December 2026**. No plan upgrade or resource change was made. Arrange an approved continuity/export plan before that date; current Free hosting also cannot provide continuous background reconciliation while it sleeps.
 
@@ -71,7 +77,7 @@ The owner approved this test-mode setup on 8 November 2026. The update reused th
 | `TRANSACTIONAL_SMS_ENABLED` | `false` |
 | `RUN_BACKGROUND_JOBS` | `true`, because this existing service has no separate worker; jobs stop while Free hosting sleeps |
 
-The original seven-item catalogue initialization and the requested 60-item expansion are complete. The authentication revision is deployed and its migration is applied. Administrator identity/setup remains a separate approval step. Do not run the demo seed or invent licence verification. Hosted signup, real message delivery and end-to-end order-flow acceptance remain to be completed under the provider restrictions below.
+The original seven-item catalogue initialization and the requested 60-item expansion are complete. The authentication revision is deployed and its migration is applied. The owner-approved judges' administrator account is provisioned and verified. Do not run the demo seed or invent licence verification. Hosted signup, real message delivery and end-to-end order-flow acceptance remain to be completed under the provider restrictions below.
 
 ## Remaining provider checks
 
