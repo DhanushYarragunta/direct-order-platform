@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 1,
+  "purpose": "test-catalog",
+  "licencePolicy": "blank-unverified",
+  "outlets": [
+    {
+      "id": "gachibowli",
+      "name": "Gachibowli cloud kitchen",
+      "address": "DLF Road, Gachibowli, Hyderabad",
+      "city": "Hyderabad",
+      "latitude": 17.444,
+      "longitude": 78.349,
+      "radiusKm": 5,
+      "minPrepMinutes": 25,
+      "activeStations": 4,
+      "fssai": "",
+      "fssaiVerified": false,
+      "deliveryFeePaise": 4000,
+      "minDeliveryPaise": 19900,
+      "freeDeliveryAbovePaise": 59900,
+      "open": true
+    },
+    {
+      "id": "kondapur",
+      "name": "Kondapur",
+      "address": "Botanical Garden Road, Kondapur, Hyderabad",
+      "city": "Hyderabad",
+      "latitude": 17.462,
+      "longitude": 78.357,
+      "radiusKm": 5,
+      "minPrepMinutes": 25,
+      "activeStations": 4,
+      "fssai": "",
+      "fssaiVerified": false,
+      "deliveryFeePaise": 4000,
+      "minDeliveryPaise": 19900,
+      "freeDeliveryAbovePaise": 59900,
+      "open": true
+    },
+    {
+      "id": "kukatpally",
+      "name": "Kukatpally",
+      "address": "KPHB Main Road, Kukatpally, Hyderabad",
+      "city": "Hyderabad",
+      "latitude": 17.494,
+      "longitude": 78.399,
+      "radiusKm": 5,
+      "minPrepMinutes": 30,
+      "activeStations": 4,
+      "fssai": "",
+      "fssaiVerified": false,
+      "deliveryFeePaise": 4000,
+      "minDeliveryPaise": 19900,
+      "freeDeliveryAbovePaise": 59900,
+      "open": true
+    }
+  ],
+  "menuItems": [
+    {
+      "id": "chicken-biryani",
+      "name": "Chicken dum biryani",
+      "description": "Tender chicken, fragrant basmati and our signature blend of slow-cooked spices.",
+      "category": "Biryani",
+      "pricePaise": 32000,
+      "familyPricePaise": 90000,
+      "portion": "Regular · serves 1",
+      "vegetarian": false,
+      "spice": "Medium",
+      "allergens": [
+        "milk"
+      ],
+      "photo": "/food/chicken-biryani.jpg",
+      "prepMinutes": 18,
+      "active": true,
+      "featured": true,
+      "menuDays": [],
+      "menuStartMinute": null,
+      "menuEndMinute": null
+    },
+    {
+      "id": "cucumber-raita",
+      "name": "Cucumber raita",
+      "description": "Cool yoghurt, crisp cucumber and roasted cumin. A refreshing side for your biryani.",
+      "category": "Sides",
+      "pricePaise": 8000,
+      "familyPricePaise": null,
+      "portion": "200 ml · serves 1–2",
+      "vegetarian": true,
+      "spice": "Mild",
+      "allergens": [
+        "milk"
+      ],
+      "photo": "/food/cucumber-raita.jpg",
+      "prepMinutes": 3,
+      "active": true,
+      "featured": false,
+      "menuDays": [],
+      "menuStartMinute": null,
+      "menuEndMinute": null
+    },
+    {
+      "id": "double-ka-meetha",
+      "name": "Double ka meetha",
+      "description": "Golden bread, saffron milk and toasted nuts. A sweet little piece of the old city.",
+      "category": "Sweets",
+      "pricePaise": 14000,
+      "familyPricePaise": null,
+      "portion": "150 g · serves 1",
+      "vegetarian": true,
+      "spice": "Sweet",
+      "allergens": [
+        "wheat",
+        "milk",
+        "almond",
+        "cashew"
+      ],
+      "photo": "/food/double-ka-meetha.jpg",
+      "prepMinutes": 4,
+      "active": true,
+      "featured": false,
+      "menuDays": [],
+      "menuStartMinute": null,
+      "menuEndMinute": null
+    },
+    {
+      "id": "gulab-jamun",
+      "name": "Gulab jamun",
+      "description": "Soft milk dumplings soaked in warm cardamom syrup. Two pieces to finish your meal.",
+      "category": "Sweets",
+      "pricePaise": 10000,
+      "familyPricePaise": null,
+      "portion": "2 pieces · serves 1",
+      "vegetarian": true,
+      "spice": "Sweet",
+      "allergens": [
+        "milk",
+        "wheat"
+      ],
+      "photo": "/food/gulab-jamun.jpg",
+      "prepMinutes": 3,
+      "active": true,
+      "featured": false,
+      "menuDays": [],
+      "menuStartMinute": null,
+      "menuEndMinute": null
+    },
+    {
+      "id": "mirchi-ka-salan",
+      "name": "Mirchi ka salan",
+      "description": "A Hyderabadi classic: green chillies in a rich, tangy peanut and sesame gravy.",
+      "category": "Sides",
+      "pricePaise": 12000,
+      "familyPricePaise": null,
+      "portion": "250 ml · serves 1–2",
+      "vegetarian": true,
+      "spice": "Hot",
+      "allergens": [
+        "peanut",
+        "sesame"
+      ],
+      "photo": "/food/mirchi-ka-salan.jpg",
+      "prepMinutes": 5,
+      "active": true,
+      "featured": false,
+      "menuDays": [],
+      "menuStartMinute": null,
+      "menuEndMinute": null
+    },
+    {
+      "id": "mutton-haleem",
+      "name": "Mutton haleem",
+      "description": "Slow-cooked mutton and wheat with fragrant spices, herbs and golden onions.",
+      "category": "Sides",
+      "pricePaise": 35000,
+      "familyPricePaise": null,
+      "portion": "Regular",
+      "vegetarian": false,
+      "spice": "Medium",
+      "allergens": [
+        "wheat",
+        "milk",
+        "egg"
+      ],
+      "photo": "/food/mutton-haleem.jpg",
+      "prepMinutes": 20,
+      "active": true,
+      "featured": false,
+      "menuDays": [],
+      "menuStartMinute": null,
+      "menuEndMinute": null
+    },
+    {
+      "id": "vegetable-biryani",
+      "name": "Vegetable biryani",
+      "description": "Seasonal vegetables and long-grain basmati, layered with herbs and golden onions.",
+      "category": "Biryani",
+      "pricePaise": 26000,
+      "familyPricePaise": null,
+      "portion": "Regular · serves 1",
+      "vegetarian": true,
+      "spice": "Medium",
+      "allergens": [
+        "milk",
+        "cashew"
+      ],
+      "photo": "/food/vegetable-biryani.jpg",
+      "prepMinutes": 15,
+      "active": true,
+      "featured": false,
+      "menuDays": [],
+      "menuStartMinute": null,
+      "menuEndMinute": null
+    }
+  ],
+  "addOns": [
+    {
+      "id": "onions",
+      "name": "Onion & lemon",
+      "pricePaise": 2000,
+      "prepMinutes": 1,
+      "allergens": [],
+      "active": true
+    },
+    {
+      "id": "raita",
+      "name": "Extra raita",
+      "pricePaise": 3000,
+      "prepMinutes": 1,
+      "allergens": [
+        "milk"
+      ],
+      "active": true
+    }
+  ],
+  "availability": [
+    {
+      "outletId": "gachibowli",
+      "itemId": "chicken-biryani",
+      "available": true
+    },
+    {
+      "outletId": "gachibowli",
+      "itemId": "cucumber-raita",
+      "available": true
+    },
+    {
+      "outletId": "gachibowli",
+      "itemId": "double-ka-meetha",
+      "available": true
+    },
+    {
+      "outletId": "gachibowli",
+      "itemId": "gulab-jamun",
+      "available": true
+    },
+    {
+      "outletId": "gachibowli",
+      "itemId": "mirchi-ka-salan",
+      "available": true
+    },
+    {
+      "outletId": "gachibowli",
+      "itemId": "mutton-haleem",
+      "available": true
+    },
+    {
+      "outletId": "gachibowli",
+      "itemId": "vegetable-biryani",
+      "available": true
+    },
+    {
+      "outletId": "kondapur",
+      "itemId": "chicken-biryani",
+      "available": true
+    },
+    {
+      "outletId": "kondapur",
+      "itemId": "cucumber-raita",
+      "available": true
+    },
+    {
+      "outletId": "kondapur",
+      "itemId": "double-ka-meetha",
+      "available": true
+    },
+    {
+      "outletId": "kondapur",
+      "itemId": "gulab-jamun",
+      "available": true
+    },
+    {
+      "outletId": "kondapur",
+      "itemId": "mirchi-ka-salan",
+      "available": true
+    },
+    {
+      "outletId": "kondapur",
+      "itemId": "mutton-haleem",
+      "available": true
+    },
+    {
+      "outletId": "kondapur",
+      "itemId": "vegetable-biryani",
+      "available": true
+    },
+    {
+      "outletId": "kukatpally",
+      "itemId": "chicken-biryani",
+      "available": true
+    },
+    {
+      "outletId": "kukatpally",
+      "itemId": "cucumber-raita",
+      "available": true
+    },
+    {
+      "outletId": "kukatpally",
+      "itemId": "double-ka-meetha",
+      "available": true
+    },
+    {
+      "outletId": "kukatpally",
+      "itemId": "gulab-jamun",
+      "available": true
+    },
+    {
+      "outletId": "kukatpally",
+      "itemId": "mirchi-ka-salan",
+      "available": true
+    },
+    {
+      "outletId": "kukatpally",
+      "itemId": "mutton-haleem",
+      "available": true
+    },
+    {
+      "outletId": "kukatpally",
+      "itemId": "vegetable-biryani",
+      "available": true
+    }
+  ],
+  "cityPrices": []
+}

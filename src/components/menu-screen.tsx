@@ -307,8 +307,9 @@ export function MenuScreen() {
               <strong>{data?.outlet.name || "Your kitchen"}</strong>
               <p>{data?.outlet.address}</p>
               <small>
-                Delivery within {data?.outlet.radiusKm || 5} km · {data?.outlet.fssaiVerified ? "FSSAI licence:" : "Demo FSSAI number (not a licence):"}{" "}
-                {data?.outlet.fssai || "Loading"}
+                Delivery within {data?.outlet.radiusKm || 5} km · {!data ? "FSSAI licence: Loading" : data.outlet.fssai
+                  ? `${data.outlet.fssaiVerified ? "FSSAI licence" : "Demo FSSAI number (not a licence)"}: ${data.outlet.fssai}`
+                  : "FSSAI licence: Not supplied (unverified)"}
               </small>
               <small><a href="/photo-credits">Photo credits · sample presentation</a></small>
             </div>
