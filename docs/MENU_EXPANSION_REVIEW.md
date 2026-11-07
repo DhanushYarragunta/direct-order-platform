@@ -7,8 +7,16 @@ This is the catalog for the Deccan Kitchen demonstration project. Prices and por
 - Exactly 60 dishes across 9 categories; 40 vegetarian dishes.
 - The original 7 dish records and their IDs/prices are preserved.
 - The existing Kondapur, Gachibowli and Kukatpally outlets are retained.
-- The additive import creates 53 dishes and 159 outlet availability rows on the original seven-dish database.
-- No cloud import, deployment, payment or provider operation was performed for this catalog change.
+- The approved additive import inserted 53 dishes and 159 outlet availability rows into the original seven-dish database.
+- The hosted catalog rollout is complete; remaining payment, message-provider and hosting checks are tracked in `docs/RELEASE_READINESS.md`.
+
+## Completed hosted rollout
+
+Render deployment **`dep-dbno6jgae00c738vmtl0`** succeeded on commit **`de354569c052cfa6eabfc1b86ae87d752171be4f`**. All seven migrations are applied, including `20261108010000_password_recovery`.
+
+The approved import inserted **53 dishes and 159 availability rows**. A subsequent dry run reported **zero changes**. All three outlets now return **60 available dishes**, and all **60 JPEG URLs returned HTTP 200**. This expansion follows the original seven-dish initialization, which inserted 33 records: three outlets, seven dishes, two add-ons and 21 availability rows. That earlier import is historical; the current hosted catalog contains all 60 reviewed dishes below.
+
+The deployment reused the existing Render Free service and database with `DEMO_MODE=false`; no plan or resource upgrade was performed. SES remains sandboxed, actual SMS is unavailable, and provider acceptance remains incomplete. The Free service sleeps when inactive and has no separate continuous worker; the Free PostgreSQL database expires on **5 December 2026**.
 
 ## Reviewed catalog
 
@@ -123,6 +131,7 @@ The 53 new photographs are bundled under `public/food/`. They depict the named d
 
 ## Verification
 
+- The exact deployed commit passed [GitHub Actions run 42408895843](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42408895843), job `128512527152`, on **8 November 2026 at 01:38:07 IST**: **162 unit tests, 107 database tests and 33 browser scenarios** (28 core, one gateway and four registration/recovery), plus TypeScript, production build, Docker build and cleanup.
 - Catalog tests cover exact totals, category coverage, original records, vegetarian counts, portions/prices, local assets and import guards.
 - Integration tests cover 53/159 additions, dry runs, repeat imports, conflicts, preservation of existing administrative changes, and retained unavailable flags.
 - Browser menu checks cover all nine category filters and the 60-card catalog.
