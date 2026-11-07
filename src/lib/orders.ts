@@ -7,7 +7,6 @@ import {
   cartLineKey,
   canTransition,
   gstIncluded,
-  estimatePreparation,
   overridePromise,
 } from "./domain";
 import { checkoutSchema, paymentSchema, quoteSchema } from "./validation";
@@ -16,6 +15,10 @@ import { menuForOutlet, menuScheduleOpen } from "./menu-context";
 import { lockRewards, quoteRewards, releaseRewards, earnRewards, firstOrderEligible } from "./rewards";
 import { deliveryFee, deliveryOutlet, type DeliveryLocation } from "./delivery";
 import { validCheckoutStart } from "./checkout-timing";
+import { notificationDeliveries } from "./notifications";
+import { paymentProvider } from "./razorpay";
+import { learnedPreparationEstimate, MAX_PREPARATION_HISTORY, preparationHour, preparationSampleFromOrder,
+  type PreparationPrediction, type PreparationSample } from "./preparation-model";
 
 export async function resolveCheckoutOutlet(tx: Prisma.TransactionClient, input: DeliveryLocation & { outletId: string; fulfillment?: string }) {
   if (input.fulfillment === "delivery") {
@@ -27,12 +30,34 @@ export async function resolveCheckoutOutlet(tx: Prisma.TransactionClient, input:
   return outlet;
 }
 
-async function preparationQuote(tx: Prisma.TransactionClient, outlet: { id: string; minPrepMinutes: number; activeStations: number }, workMinutes: number) {
+function livePreparationHistory() {
+  return process.env.DEMO_MODE !== "true" && process.env.RAZORPAY_KEY_ID?.startsWith("rzp_live_") === true;
+}
+
+function predictionMetadata(estimate: PreparationPrediction) {
+  return { estimateModelVersion: estimate.modelVersion, estimateRawMinutes: estimate.rawMinutes,
+    estimateTrainingSamples: estimate.trainingSamples, estimateValidationMae: estimate.validationMae,
+    estimateBaselineMae: estimate.baselineMae };
+}
+
+async function preparationQuote(tx: Prisma.TransactionClient, outlet: { id: string; minPrepMinutes: number; activeStations: number }, workMinutes: number,
+  allowLearning = paymentProvider() === "razorpay" && livePreparationHistory()) {
+  const now = new Date();
   const queue = await tx.order.aggregate({
     where: { outletId: outlet.id, status: { in: ["PLACED", "PREPARING"] } },
     _sum: { workMinutes: true },
   });
-  return estimatePreparation(workMinutes, queue._sum.workMinutes || 0, outlet.minPrepMinutes, outlet.activeStations);
+  const inputs = { workMinutes, queueWork: queue._sum.workMinutes || 0, minimum: outlet.minPrepMinutes,
+    stations: outlet.activeStations, hour: preparationHour(now) };
+  const rows = allowLearning ? await tx.order.findMany({
+    where: { outletId: outlet.id, estimateSource: "live", paymentStatus: "PAID", status: { not: "CANCELLED" },
+      placedAt: { gte: new Date(now.getTime() - 90 * 86400_000) }, readyAt: { not: null, lte: now } },
+    orderBy: { placedAt: "desc" }, take: MAX_PREPARATION_HISTORY,
+    select: { workMinutes: true, placedAt: true, readyAt: true, estimateSource: true, estimateQueueWork: true,
+      estimateStations: true, estimateMinimumMinutes: true, estimateHour: true },
+  }) : [];
+  const history = rows.map(preparationSampleFromOrder).filter((sample): sample is PreparationSample => sample !== null);
+  return { ...learnedPreparationEstimate(inputs, history, now, allowLearning), inputs };
 }
 
 export async function quoteCheckout(tx: Prisma.TransactionClient, input: z.infer<typeof quoteSchema>, userId: string) {
@@ -47,6 +72,7 @@ export async function quoteCheckout(tx: Prisma.TransactionClient, input: z.infer
     ...rewards, totalPaise: rewards.totalPaise + fee, gstPaise: gstIncluded(rewards.totalPaise + fee),
     deliveryFeePaise: fee, fulfillment: input.fulfillment || "pickup", outletId: outlet.id, outletName: outlet.name,
     estimateMinutes: estimate.minutes, estimateFallback: estimate.fallback,
+    ...predictionMetadata(estimate),
     quotedAt: new Date().toISOString(), minimumMinutes: outlet.minPrepMinutes,
     minDeliveryPaise: outlet.minDeliveryPaise, freeDeliveryAbovePaise: outlet.freeDeliveryAbovePaise,
   };
@@ -78,7 +104,7 @@ export async function priceCheckoutCart(
 export const orderInclude = {
   lines: true,
   outlet: true,
-  messages: { orderBy: { createdAt: "asc" as const } },
+  messages: { orderBy: { createdAt: "asc" as const }, include: { deliveries: { select: { channel: true, status: true } } } },
   payments: { orderBy: { createdAt: "desc" as const }, take: 8 },
 } satisfies Prisma.OrderInclude;
 export async function getOrder(id: string, user: AuthUser) {
@@ -90,7 +116,8 @@ export async function getOrder(id: string, user: AuthUser) {
   if (user.role === "CUSTOMER" && order.userId !== user.id)
     throw new AppError(404, "Order not found");
   if (user.role !== "CUSTOMER") staffOutlet(user, order.outletId);
-  return order;
+  const receiptReviewRequired = await db.payment.count({ where: { orderId: id, refundReviewRequired: true } }) > 0;
+  return { ...order, receiptReviewRequired };
 }
 export async function checkout(
   input: z.infer<typeof checkoutSchema>,
@@ -168,6 +195,7 @@ export async function checkout(
           gstPaise: gstIncluded(totalPaise),
           estimateMinutes: estimate.minutes,
           estimateFallback: estimate.fallback,
+          ...predictionMetadata(estimate),
           workMinutes: priced.workMinutes,
           fulfillment: input.fulfillment,
           address: input.address,
@@ -195,7 +223,7 @@ export async function checkout(
   }
 }
 
-async function lockOrder(tx: Prisma.TransactionClient, id: string) {
+export async function lockOrder(tx: Prisma.TransactionClient, id: string) {
   await tx.$queryRaw`SELECT "id" FROM "Order" WHERE "id"=${id} FOR UPDATE`;
   const order = await tx.order.findUnique({
     where: { id },
@@ -205,17 +233,37 @@ async function lockOrder(tx: Prisma.TransactionClient, id: string) {
   return order;
 }
 
-async function settle(
+export async function queueGatewayRefund(tx: Prisma.TransactionClient, paymentId: string, reason: string) {
+  const payment = await tx.payment.update({ where: { id: paymentId }, data: {
+    status: "REFUND_PENDING", refundReason: reason, refundNextAttemptAt: new Date(), resolveAt: null,
+  } });
+  await tx.message.upsert({
+    where: { orderId_kind: { orderId: payment.orderId, kind: `REFUND_PENDING_${payment.id}` } },
+    create: { orderId: payment.orderId, kind: `REFUND_PENDING_${payment.id}`,
+      body: `${reason} A full refund has been requested. We will update you when the payment provider confirms it.`,
+      deliveries: { create: notificationDeliveries() } },
+    update: {},
+  });
+  await tx.order.update({ where: { id: payment.orderId }, data: { version: { increment: 1 } } });
+}
+
+export async function settlePayment(
   tx: Prisma.TransactionClient,
   id: string,
   paymentId: string,
 ) {
   const order = await lockOrder(tx, id);
+  const payment = await tx.payment.findUniqueOrThrow({ where: { id: paymentId } });
+  if (payment.orderId !== id) throw new AppError(409, "Payment does not belong to this order");
+  if (payment.status !== "PENDING") return order;
+  const gateway = payment.provider === "razorpay";
   await lockRewards(tx, order.userId);
-  if ((await tx.user.findUnique({ where: { id: order.userId }, select: { deletedAt: true } }))?.deletedAt)
+  const deleted = (await tx.user.findUnique({ where: { id: order.userId }, select: { deletedAt: true } }))?.deletedAt;
+  if (deleted && !gateway)
     throw new AppError(401, "This account has been deleted");
-  if (order.status !== "PENDING_PAYMENT" || order.expiresAt < new Date()) {
-    await tx.payment.updateMany({
+  if (order.status !== "PENDING_PAYMENT" || order.expiresAt < new Date() || deleted) {
+    if (gateway) await queueGatewayRefund(tx, paymentId, "The payment arrived after this checkout closed or was already paid.");
+    else await tx.payment.updateMany({
       where: { id: paymentId, status: "PENDING" },
       data: { status: "FAILED", resolveAt: null },
     });
@@ -225,10 +273,12 @@ async function settle(
         where: { id },
         data: {
           status: "CANCELLED",
-          paymentStatus: "FAILED",
+          paymentStatus: gateway ? "REFUND_PENDING" : "FAILED",
           version: { increment: 1 },
         },
       });
+    } else if (gateway && order.status === "CANCELLED") {
+      await tx.order.update({ where: { id }, data: { paymentStatus: "REFUND_PENDING", version: { increment: 1 } } });
     }
     return tx.order.findUniqueOrThrow({ where: { id } });
   }
@@ -250,12 +300,16 @@ async function settle(
   const welcomeLost = firstCoupon?.firstOrderOnly && !(await firstOrderEligible(tx, order.userId, order.id));
   if (unavailable || welcomeLost) {
     await releaseRewards(tx, order);
-    await tx.payment.update({
+    if (gateway) await queueGatewayRefund(tx, paymentId, welcomeLost
+      ? "The first-order coupon could no longer be applied, so the order was cancelled."
+      : "An item became unavailable, so the order was cancelled before reaching the kitchen.");
+    else await tx.payment.update({
       where: { id: paymentId },
       data: { status: "REFUNDED", resolveAt: null },
     });
-    await tx.message.create({
+    if (!gateway) await tx.message.create({
       data: {
+        deliveries: { create: notificationDeliveries() },
         orderId: id,
         kind: "REFUND",
         body: welcomeLost
@@ -267,24 +321,13 @@ async function settle(
       where: { id },
       data: {
         status: "CANCELLED",
-        paymentStatus: "REFUNDED",
+        paymentStatus: gateway ? "REFUND_PENDING" : "REFUNDED",
         version: { increment: 1 },
       },
     });
   }
-  const queue = await tx.order.aggregate({
-    where: {
-      outletId: order.outletId,
-      status: { in: ["PLACED", "PREPARING"] },
-    },
-    _sum: { workMinutes: true },
-  });
-  const estimate = estimatePreparation(
-    order.workMinutes,
-    queue._sum.workMinutes || 0,
-    order.outlet.minPrepMinutes,
-    order.outlet.activeStations,
-  );
+  const realObservation = gateway && !payment.testMode && livePreparationHistory();
+  const estimate = await preparationQuote(tx, order.outlet, order.workMinutes, realObservation);
   const promisedAt = new Date(Date.now() + estimate.minutes * 60000);
   await tx.payment.update({
     where: { id: paymentId },
@@ -296,6 +339,7 @@ async function settle(
   });
   await tx.message.create({
     data: {
+      deliveries: { create: notificationDeliveries() },
       orderId: id,
       kind: "PLACED",
       body: `Order confirmed. ${order.outlet.name} is preparing your order, with an estimated preparation time of ${estimate.minutes} minutes.`,
@@ -312,6 +356,12 @@ async function settle(
       originalPromisedAt: promisedAt,
       estimateMinutes: estimate.minutes,
       estimateFallback: estimate.fallback,
+      ...predictionMetadata(estimate),
+      estimateSource: realObservation ? "live" : "demo",
+      estimateQueueWork: estimate.inputs.queueWork,
+      estimateStations: estimate.inputs.stations,
+      estimateMinimumMinutes: estimate.inputs.minimum,
+      estimateHour: estimate.inputs.hour,
       version: { increment: 1 },
     },
   });
@@ -322,7 +372,7 @@ export async function payOrder(
   input: z.infer<typeof paymentSchema>,
   user: AuthUser,
 ) {
-  if (process.env.DEMO_MODE !== "true")
+  if (paymentProvider() !== "demo")
     throw new AppError(403, "The simulated gateway is disabled");
   return serializable(async (tx) => {
     const order = await lockOrder(tx, id);
@@ -361,7 +411,7 @@ export async function payOrder(
           input.outcome === "pending" ? new Date(Date.now() + 8000) : null,
       },
     });
-    if (input.outcome === "success") return settle(tx, id, payment.id);
+    if (input.outcome === "success") return settlePayment(tx, id, payment.id);
     return tx.order.update({
       where: { id },
       data: {
@@ -392,17 +442,26 @@ export async function advanceOrder(
       throw new AppError(409, "This order changed. Refresh and try again.");
     if (!canTransition(order.status, status, order.fulfillment))
       throw new AppError(409, "This order stage cannot be changed that way");
+    let paymentStatus = order.paymentStatus;
     if (status === "CANCELLED") {
       await releaseRewards(tx, order);
+      const captured = await tx.payment.findMany({ where: { orderId: id, status: "PAID", provider: "razorpay" } });
+      for (const payment of captured) await queueGatewayRefund(tx, payment.id, "Your order was cancelled before preparation began.");
       await tx.payment.updateMany({
-        where: { orderId: id, status: "PAID" },
+        where: { orderId: id, status: "PAID", provider: "demo" },
         data: { status: "REFUNDED" },
       });
+      // A refund may already have been started in the provider dashboard.
+      // Cancelling the order must preserve that pending confirmation as well
+      // as any refund queued above.
+      const pendingRefunds = await tx.payment.count({ where: { orderId: id, status: "REFUND_PENDING" } });
+      paymentStatus = pendingRefunds ? "REFUND_PENDING" : "REFUNDED";
     }
     if ((status === "HANDED_OFF" && order.fulfillment === "pickup") || status === "DELIVERED")
       await earnRewards(tx, { ...order, totalPaise: order.totalPaise - order.deliveryFeePaise });
     await tx.message.create({
       data: {
+        deliveries: { create: notificationDeliveries() },
         orderId: id,
         kind: status,
         body:
@@ -411,10 +470,10 @@ export async function advanceOrder(
               PREPARING: "Your food is now being prepared.",
               READY: order.fulfillment === "delivery" ? "Your order is ready for delivery handover." : "Your order is ready for pickup.",
               HANDED_OFF: order.fulfillment === "delivery" ? "Your order has been handed to the delivery team." : "Your order has been handed over. Enjoy your meal!",
-              OUT_FOR_DELIVERY: "The outlet marked your order out for delivery. Delivery updates are recorded manually in this demo.",
+              OUT_FOR_DELIVERY: "The outlet marked your order out for delivery.",
               DELIVERED: "The outlet confirmed delivery. Enjoy your meal!",
               CANCELLED:
-                "Your order was cancelled and the simulated payment refunded.",
+                paymentStatus === "REFUND_PENDING" ? "Your order was cancelled. Your refund is being processed." : "Your order was cancelled and the payment refunded.",
             } as Record<string, string>
           )[status] || status,
       },
@@ -433,8 +492,7 @@ export async function advanceOrder(
         status,
         readyAt: status === "READY" ? new Date() : order.readyAt,
         deliveredAt: status === "DELIVERED" ? new Date() : order.deliveredAt,
-        paymentStatus:
-          status === "CANCELLED" ? "REFUNDED" : order.paymentStatus,
+        paymentStatus,
         version: { increment: 1 },
       },
     });
@@ -472,6 +530,7 @@ export async function changePromise(
     });
     await tx.message.create({
       data: {
+        deliveries: { create: notificationDeliveries() },
         orderId: id,
         kind: `OVERRIDE_${order.version}`,
         body: `The kitchen updated your preparation estimate to ${minutes} minutes from now. ${reason}`,
@@ -486,14 +545,14 @@ export async function changePromise(
 
 export async function runOrderJobs() {
   const now = new Date();
-  const pending = await db.payment.findMany({
-    where: { status: "PENDING", resolveAt: { lte: now } },
+  const pending = paymentProvider() === "demo" ? await db.payment.findMany({
+    where: { provider: "demo", status: "PENDING", resolveAt: { lte: now } },
     select: { id: true, orderId: true },
     take: 30,
-  });
+  }) : [];
   for (const payment of pending)
     await serializable(async (tx) => {
-      await settle(tx, payment.orderId, payment.id);
+      await settlePayment(tx, payment.orderId, payment.id);
     });
   const expiring = await db.order.findMany({
     where: { status: "PENDING_PAYMENT", expiresAt: { lte: now } },
@@ -544,6 +603,7 @@ export async function runOrderJobs() {
         return;
       await tx.message.create({
         data: {
+          deliveries: { create: notificationDeliveries() },
           orderId: id,
           kind: "LATE",
           body: "Your order is taking longer than promised. The outlet manager has been notified and the kitchen is working on it.",

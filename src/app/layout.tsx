@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { Provider } from "@/components/provider";
 import { Shell } from "@/components/shell";
 import "./globals.css";
+import "@/components/live-services.css";
 export const metadata: Metadata = {
   title: "Deccan Kitchen — A taste of Hyderabad",
   description:

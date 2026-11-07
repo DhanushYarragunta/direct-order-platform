@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ChefHat, ShieldCheck, UserRound } from "lucide-react";
 import { request } from "@/lib/client";
@@ -7,6 +7,8 @@ import { useApp } from "./provider";
 import { ErrorNotice } from "./ui";
 import Link from "next/link";
 import { PhoneSignIn } from "./phone-sign-in";
+import { CodeSignIn, type CommunicationMethods } from "./code-sign-in";
+import { EmailRegistration } from "./email-registration";
 import "./privacy.css";
 
 export function AuthScreen() {
@@ -14,8 +16,15 @@ export function AuthScreen() {
     router = useRouter(),
     [register, setRegister] = useState(false),
     [phoneSignIn, setPhoneSignIn] = useState(false),
+    [emailCodeSignIn, setEmailCodeSignIn] = useState(false),
+    [methods, setMethods] = useState<CommunicationMethods | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void request<CommunicationMethods>("/api/auth/methods").then(value => { if (active) { setMethods(value); if (value.emailCode && !value.demoMode) setEmailCodeSignIn(true); } }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   async function complete(role: string) {
     await app.refreshUser();
     const next = new URLSearchParams(location.search).get("next");
@@ -103,11 +112,12 @@ export function AuthScreen() {
             ? "Create your account to order directly."
             : "Sign in for good food, without the fuss."}
         </p>
-        {app.demoMode && <div className="auth-methods" aria-label="Sign-in method">
-          <button type="button" className={`button ${!phoneSignIn ? "primary" : ""}`} aria-pressed={!phoneSignIn} onClick={() => setPhoneSignIn(false)}>Email</button>
-          <button type="button" className={`button ${phoneSignIn ? "primary" : ""}`} aria-pressed={phoneSignIn} onClick={() => setPhoneSignIn(true)}>Phone code · demo</button>
+        {(!register || app.demoMode) && (app.demoMode || methods?.phoneCode || methods?.emailCode) && <div className="auth-methods" aria-label="Sign-in method">
+          {(app.demoMode || methods?.emailCode) && <button type="button" className={`button ${emailCodeSignIn ? "primary" : ""}`} aria-pressed={emailCodeSignIn} onClick={() => { setEmailCodeSignIn(true); setPhoneSignIn(false); }}>Email code{app.demoMode ? " · demo" : ""}</button>}
+          <button type="button" className={`button ${!phoneSignIn && !emailCodeSignIn ? "primary" : ""}`} aria-pressed={!phoneSignIn && !emailCodeSignIn} onClick={() => { setPhoneSignIn(false); setEmailCodeSignIn(false); }}>Password</button>
+          {(app.demoMode || methods?.phoneCode) && <button type="button" className={`button ${phoneSignIn ? "primary" : ""}`} aria-pressed={phoneSignIn} onClick={() => { setPhoneSignIn(true); setEmailCodeSignIn(false); }}>Phone code{app.demoMode ? " · demo" : ""}</button>}
         </div>}
-        {phoneSignIn ? <PhoneSignIn complete={complete} /> : <form onSubmit={submit} className="form-stack">
+        {register && !app.demoMode ? <EmailRegistration complete={complete} /> : phoneSignIn ? <PhoneSignIn complete={complete} /> : emailCodeSignIn ? <CodeSignIn channel="email" demoMode={app.demoMode} complete={complete} /> : <form onSubmit={submit} className="form-stack">
           {register && (
             <label>
               Your name
@@ -174,6 +184,7 @@ export function AuthScreen() {
             onClick={() => {
               setRegister(!register);
               setPhoneSignIn(false);
+              setEmailCodeSignIn(false);
               setError("");
             }}
           >

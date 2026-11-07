@@ -33,6 +33,14 @@ services:
         value: 'true'
       - key: ALLOW_PUBLIC_DEMO
         value: 'true'
+      - key: ALLOW_PUBLIC_TEST_PAYMENTS
+        value: 'false'
+      - key: PAYMENT_PROVIDER
+        value: demo
+      - key: TRANSACTIONAL_EMAIL_ENABLED
+        value: 'false'
+      - key: TRANSACTIONAL_SMS_ENABLED
+        value: 'false'
       - key: DEMO_PASSWORD
         generateValue: true
       - key: RUN_BACKGROUND_JOBS
@@ -58,8 +66,23 @@ services:
         fromDatabase:
           name: deccan-kitchen-db
           property: connectionString
+      - key: APP_ORIGIN
+        fromService:
+          name: deccan-kitchen-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
       - key: DEMO_MODE
         value: 'true'
+      - key: ALLOW_PUBLIC_DEMO
+        value: 'true'
+      - key: ALLOW_PUBLIC_TEST_PAYMENTS
+        value: 'false'
+      - key: PAYMENT_PROVIDER
+        value: demo
+      - key: TRANSACTIONAL_EMAIL_ENABLED
+        value: 'false'
+      - key: TRANSACTIONAL_SMS_ENABLED
+        value: 'false'
       - key: WORKER_HEARTBEAT_FILE
         value: /tmp/deccan-worker-heartbeat
 

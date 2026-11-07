@@ -4,7 +4,7 @@
 
 Project repository: https://github.com/DhanushYarragunta/direct-order-platform
 
-The application is ready for local review. No public app deployment has been provisioned. The selected deployment provider is Render; follow `docs/RENDER.md` and the root `render.yaml`. Public repository access and the previous feature commit (`8ec7601`) were checked on 4 November 2026. The quality changes are committed locally after verification; push separately after reviewing the new history.
+The application has a local review environment and an existing public Render deployment. The live-service release must be verified and deployed to both web and worker before the hosted app can be treated as current. Follow `docs/RENDER.md` for upgrades and controlled staging; the root `render.yaml` retains safe public-demo settings. Check the actual GitHub Actions result and the deployed commit for each service instead of assuming local edits are published.
 
 ## Local steps
 
@@ -46,15 +46,15 @@ Open `/login` and choose one of the labelled demo accounts. No shared password n
 
 Use separate browser profiles or an incognito window to review customer and staff flows simultaneously. A browser profile has one current account. The demo is intentionally accessible when enabled; do not use these shortcuts as production access control.
 
-## Hosting plan, not a completed deployment
+## Hosting and release verification
 
 Use a long-running Node server with a managed PostgreSQL database. Install the locked dependencies with `npm ci`, generate Prisma, apply migrations as a release step, build with `npm run build`, and run `npm start`. Configure the database URL and exact HTTPS app origin through the host’s secret/environment settings. TLS must terminate at the proxy; session cookies become Secure when the configured origin uses HTTPS.
 
 SSE endpoints must permit streamed responses, disable proxy buffering, and allow long-lived connections. The application starts a three-second job loop from Next instrumentation. A separately supervised `npm run worker` process is also available. Multiple loops are safe through database transactions and uniqueness, but a dedicated singleton worker reduces redundant polling. This design is not suitable for a short-lived request-only host without separate worker and stream infrastructure.
 
-Back up PostgreSQL, provide health monitoring, and verify session expiry, database recovery, and streaming behaviour on the chosen host. No platform, paid service, credentials, or deployment has been provisioned yet.
+Back up PostgreSQL, provide health monitoring, and verify session expiry, database recovery, and streaming behaviour on the chosen host. Existing hosting and a successful local build do not establish that the newest release or provider configuration has been deployed.
 
-For deployment commands, Docker/Compose, explicit public-demo opt-in, uploads persistence, CI, health monitoring and a backup/restore drill, follow `docs/LAUNCH_OPERATIONS.md`. Before a real business launch, record verified FSSAI numbers and verification notes in Admin outlet settings, confirm photo rights/allergens, provide the privacy contact and approved retention policy, and complete target-device and staging acceptance. Mock payments/messages remain within the assessment scope; actual providers require a separate production decision.
+For deployment commands, Docker/Compose, explicit public-demo opt-in, uploads persistence, CI, health monitoring and a backup/restore drill, follow `docs/LAUNCH_OPERATIONS.md`. Before a real business launch, record verified FSSAI numbers and verification notes in Admin outlet settings, confirm photo rights/allergens, provide the privacy contact and approved retention policy, and complete target-device and staging acceptance. Razorpay and email/SMS provider code is available; ordinary customer use requires the documented activation and acceptance checks.
 
 ## Review the extended features
 
@@ -67,4 +67,13 @@ Generated outputs are ignored, not tracked. `npm run package:source` creates a s
 
 ## Quality verification (5 November 2026)
 
-The repository now includes `/api/health`, strict nonce CSP/HSTS, demo phone OTP, privacy controls, seven dishes, secure photo uploads, delivery completion, fees/localities, prepayment wait estimates, large tablet tickets, connection states and business-target metrics. See `docs/ACCEPTANCE_TESTING.md` for physical readability, human timing and sustained staging validation. No public deployment is claimed until a host is selected and checked.
+The repository includes `/api/health`, strict nonce CSP/HSTS, demo phone OTP, privacy controls, seven dishes, secure photo uploads, delivery completion, fees/localities, prepayment wait estimates, large tablet tickets, connection states and business-target metrics. See the README for the latest recorded local verification and `docs/ACCEPTANCE_TESTING.md` for physical readability, human timing and sustained staging validation. Recheck the deployed release independently.
+
+
+## Live services
+
+The code supports Razorpay hosted checkout, PDF payment receipts, email/SMS OTP and transactional notifications. Amazon SES and AWS End User Messaging are the default messaging adapters; Resend/Twilio are optional. Follow [the live service guide](docs/LIVE_SERVICES.md) and set the named variables from `.env.example` in both the web and worker environments. Compose propagates these settings to both processes; an AWS-hosted workload should use an IAM role instead of copied credentials.
+
+The existing Render blueprint deliberately remains a demo deployment. AWS credits do not pay Render fees or Razorpay transaction fees. Using AWS for email/SMS does not itself deploy the web application to AWS.
+
+After upgrading, run `npm run db:migrate` and `npm run build`, then restart the web and worker processes together. Review **Workspace → Services** for configuration and queue status. Do not enable live keys while shared demo accounts are enabled. Test provider calls using the documented sandbox/controlled acceptance procedure before live customer use.

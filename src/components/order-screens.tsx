@@ -10,6 +10,7 @@ import {
   ChefHat,
   Clock3,
   CreditCard,
+  Download,
   MapPin,
   Printer,
   Smartphone,
@@ -20,6 +21,7 @@ import type { Order } from "@/lib/types";
 import { useApp } from "./provider";
 import { Empty, ErrorNotice, FoodPhoto, Loading } from "./ui";
 import { RewardsWallet } from "./rewards-wallet";
+import { GatewayPayment } from "./gateway-payment";
 import { finishCheckoutTiming } from "@/lib/checkout-timing";
 
 export const time = (value: string) =>
@@ -140,7 +142,9 @@ export function OrdersScreen() {
   );
 }
 
-export function PaymentScreen({ id }: { id: string }) {
+export function PaymentScreen({ id, paymentProvider, gatewayConfigured, gatewayTestMode, nonce }: {
+  id: string; paymentProvider: string; gatewayConfigured: boolean; gatewayTestMode: boolean; nonce: string;
+}) {
   const app = useApp(),
     router = useRouter(),
     {
@@ -200,7 +204,7 @@ export function PaymentScreen({ id }: { id: string }) {
         <span className="payment-icon">
           <CreditCard size={30} />
         </span>
-        <p className="eyebrow">SIMULATED PAYMENT</p>
+        <p className="eyebrow">{paymentProvider === "demo" ? "SIMULATED PAYMENT" : "SECURE PAYMENT"}</p>
         <h1>One last step.</h1>
         <p>
           {order.number} · {order.outlet.name}
@@ -213,13 +217,16 @@ export function PaymentScreen({ id }: { id: string }) {
           <ErrorNotice
             message={
               order.paymentStatus === "REFUNDED"
-                ? order.messages.find((message) => message.kind === "REFUND")?.body || "Your simulated payment was refunded. Return to the menu to start again."
-                : "This checkout has expired. Start a new order from the menu."
+                ? order.messages.find((message) => message.kind === "REFUND")?.body || "Your payment was refunded. Return to the menu to start again."
+                : order.paymentStatus === "REFUND_PENDING"
+                  ? "Your refund is being processed. Its status will update on your order page."
+                  : "This checkout has expired. Start a new order from the menu."
             }
           />
         ) : (
           <>
             {order.redeemedPoints > 0 && <p className="reward-success">{order.redeemedPoints} loyalty points are reserved for this order until payment or expiry. Failed attempts can be retried.</p>}
+            {paymentProvider === "demo" && app.demoMode ? <>
             <div className="payment-methods">
               {[
                 { name: "UPI", icon: Smartphone },
@@ -277,6 +284,11 @@ export function PaymentScreen({ id }: { id: string }) {
                   : `Pay ${money(order.totalPaise)} · test mode`}
               <ArrowRight size={17} />
             </button>
+            </> : paymentProvider === "razorpay" && gatewayConfigured ? (
+              <GatewayPayment orderId={id} totalPaise={order.totalPaise} nonce={nonce}
+                testMode={gatewayTestMode} onComplete={refresh} />
+            ) : <ErrorNotice message="Online payment is temporarily unavailable. Your order has not been charged. Please try again later." />}
+            <p className="payment-policy"><Link href="/help">Payment, cancellation and refund information</Link></p>
             <small>
               Checkout expires at {time(order.expiresAt)}. Stock is checked
               again before confirmation.
@@ -323,13 +335,32 @@ export function OrderScreen({ id }: { id: string }) {
         <Link className="back-link" href="/orders">
           <ArrowLeft size={17} /> All orders
         </Link>
-        <button
-          className="button secondary no-print"
-          onClick={() => window.print()}
-        >
-          <Printer size={16} /> Print receipt
-        </button>
+        <div className="receipt-actions no-print">
+          {["PAID", "REFUND_PENDING", "REFUNDED"].includes(order.paymentStatus) && <button
+            className="button secondary" disabled={busy || order.receiptReviewRequired} onClick={async () => {
+              setBusy(true); setActionError("");
+              try {
+                const response = await fetch(`/api/orders/${id}/receipt`, { cache: "no-store" });
+                if (!response.ok) {
+                  const payload = await response.json().catch(() => ({}));
+                  throw new Error(payload.error || "The receipt could not be downloaded. Please try again.");
+                }
+                if (!response.headers.get("content-type")?.includes("application/pdf")) throw new Error("The receipt service returned an unexpected response.");
+                const url = URL.createObjectURL(await response.blob());
+                const link = document.createElement("a");
+                link.href = url; link.download = `receipt-${order.number.replace(/[^A-Za-z0-9_-]/g, "")}.pdf`; link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 10_000);
+              } catch (e) { setActionError((e as Error).message); }
+              finally { setBusy(false); }
+            }}>
+            <Download size={16} /> Download PDF
+          </button>}
+          <button className="button secondary" disabled={order.receiptReviewRequired} onClick={() => window.print()}>
+            <Printer size={16} /> Print receipt
+          </button>
+        </div>
       </div>
+      {order.receiptReviewRequired && <ErrorNotice message="This payment is being reconciled with the gateway. Receipts are temporarily unavailable. Contact order support with your order number." />}
       <div className="order-detail-heading">
         <div>
           <p className="eyebrow">{order.outlet.name.toUpperCase()}</p>
@@ -363,8 +394,8 @@ export function OrderScreen({ id }: { id: string }) {
                   <h2>{time(order.readyAt || order.promisedAt)}</h2>
                   <p>
                     {order.estimateFallback
-                      ? "Kitchen minimum used as a safe fallback."
-                      : "Based on your dishes and current kitchen load."}
+                      ? "Based on your meal and current kitchen load."
+                      : "Based on recent preparation times and current kitchen load."}
                   </p>
                 </div>
               </div>
@@ -404,8 +435,10 @@ export function OrderScreen({ id }: { id: string }) {
             {order.status === "CANCELLED" && (
               <p>
                 {order.paymentStatus === "REFUNDED"
-                  ? "Your simulated payment has been refunded."
-                  : "No successful payment was recorded."}
+                  ? "Your payment has been refunded."
+                  : order.paymentStatus === "REFUND_PENDING"
+                    ? "Your refund is being processed. This page updates when the payment provider confirms it."
+                    : "No successful payment was recorded."}
               </p>
             )}
             {late &&
@@ -422,12 +455,16 @@ export function OrderScreen({ id }: { id: string }) {
                   <div>
                     <p>{message.body}</p>
                     <small>
-                      {time(message.createdAt)} · Simulated order message
+                      {time(message.createdAt)} · Order update
                     </small>
+                    {message.deliveries?.length ? <p className="delivery-status">{message.deliveries.map((delivery) =>
+                      `${delivery.channel === "EMAIL" ? "Email" : "SMS"}: ${delivery.status === "ACCEPTED" ? "accepted by provider" : delivery.status.toLowerCase().replaceAll("_", " ")}`
+                    ).join(" · ")}</p> : null}
                   </div>
                 </div>
               ))}
             </div>
+            <p><Link href="/privacy">Verify your contact details for email and SMS updates</Link></p>
           </section>
           <section className="panel">
             <h2>
@@ -443,7 +480,7 @@ export function OrderScreen({ id }: { id: string }) {
                 : order.outlet.address}
             </p>
             <small>{order.outlet.fssaiVerified ? "FSSAI licence" : "DEMO FSSAI number · not a verified licence"}: {order.outlet.fssai}</small>
-            {order.fulfillment === "delivery" && <p>Delivery stages are recorded manually by the outlet in this demo.</p>}
+            {order.fulfillment === "delivery" && <p>Delivery stages are updated by the outlet team.</p>}
             {order.deliveredAt && <p>Delivered at {time(order.deliveredAt)}</p>}
             {order.note && (
               <p className="order-note">Kitchen note: {order.note}</p>
@@ -487,11 +524,12 @@ export function OrderScreen({ id }: { id: string }) {
             </div>
           </div>
           <p className="payment-receipt">
-            {order.paymentStatus} ·{" "}
+            {order.receiptReviewRequired ? "Payment reconciliation required" : ({ PAID: "Payment received", REFUND_PENDING: "Refund pending", REFUNDED: "Refunded", FAILED: "Payment failed", PENDING: "Awaiting payment" } as Record<string, string>)[order.paymentStatus] || order.paymentStatus} ·{" "}
             {order.payments.find(
-              (p) => p.status === "PAID" || p.status === "REFUNDED",
-            )?.method || "Test gateway"}
+              (p) => ["PAID", "REFUND_PENDING", "REFUNDED"].includes(p.status),
+            )?.method || "Payment pending"}
           </p>
+          {order.payments.some(payment => payment.provider === "razorpay" && payment.testMode) && <p className="privacy-callout">Test payment · no real money collected.</p>}
           {((order.status === "HANDED_OFF" && order.fulfillment === "pickup") || order.status === "DELIVERED") && <p className="reward-success">You earned {Math.floor((order.totalPaise - order.deliveryFeePaise) / 10000)} loyalty points. Thank you for ordering direct.</p>}
           {order.status === "CANCELLED" && order.redeemedPoints > 0 && <p className="reward-success">Your {order.redeemedPoints} reserved points have been returned.</p>}
           {order.status === "PLACED" && (
@@ -514,7 +552,7 @@ export function OrderScreen({ id }: { id: string }) {
                   }
                 }}
               >
-                {busy ? "Cancelling…" : "Cancel order & refund test payment"}
+                {busy ? "Cancelling…" : "Cancel order & request refund"}
               </button>
               <small className="no-print">
                 Available until the kitchen starts preparation.

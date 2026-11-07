@@ -9,6 +9,9 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 - Browse dishes with dietary information, allergens, portions and add-ons.
 - Choose delivery by GPS or supported locality with automatic outlet routing.
 - Review preparation estimates, delivery charges, coupons and loyalty discounts before payment.
+- Pay through Razorpay hosted checkout, with signed webhook verification and automatic reconciliation.
+- Download itemized PDF payment receipts and track confirmed or pending refunds.
+- Sign in with email or SMS codes; verify contacts for transactional order updates.
 - Track orders through preparation, handoff and delivery completion.
 - View order history, reorder favourites and submit party-order requests.
 
@@ -24,6 +27,8 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 - Manage dishes, photo uploads, city prices and serving schedules.
 - Configure delivery policies, kitchen capacity and licence declarations.
 - Review sales, preparation times and repeat purchases by outlet.
+- Monitor payment recovery, pending refunds and notification delivery status.
+- Inspect worker activity, failed or stalled tasks, queue ages and payment recovery references.
 - Measure checkout duration, 30-day retention cohorts and direct-order adoption against aggregate app-order baselines.
 
 ### Accounts and privacy
@@ -40,6 +45,9 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 | Database | PostgreSQL 16, Prisma 7 |
 | Live updates | Server-Sent Events with shared polling |
 | Validation | Zod |
+| Payments | Razorpay hosted checkout and signed webhooks |
+| Email and SMS | Amazon SES, AWS End User Messaging; optional Resend and Twilio |
+| PDF receipts | pdf-lib with embedded Noto fonts |
 | Testing | Vitest, Playwright |
 | Deployment | Docker, Docker Compose, Render Blueprint |
 | CI | GitHub Actions |
@@ -87,7 +95,9 @@ Additional settings are documented in [launch operations](docs/LAUNCH_OPERATIONS
 
 With `DEMO_MODE=true`, visit `/login` and select **Customer**, **Admin**, **Manager** or an outlet's **Kitchen** account. Email/password registration and sign-in are also available.
 
-Payments, messages and phone verification are simulated in demo mode. Seeded licence numbers and customer records are sample data. Preparation estimates use configurable rules based on order work, kitchen load and minimum preparation times.
+Demo mode provides simulated services and sample accounts. Hosted Razorpay test checkout is also supported. Live payments and messages require provider configuration and approved sender/merchant accounts. Preparation estimates train a small model on eligible completed live orders, with chronological validation and a kitchen-load fallback until sufficient evidence is available. Seeded licence numbers and customer records are sample data.
+
+See [live payments, OTP and messaging setup](docs/LIVE_SERVICES.md) for AWS configuration, Razorpay webhooks, cost controls and launch verification.
 
 ## Verification
 
@@ -97,10 +107,16 @@ Payments, messages and phone verification are simulated in demo mode. Seeded lic
 | `npm run verify:core` | Full verification, including isolated database and browser tests |
 | `npm run test:integration` | Database integration tests |
 | `npm run test:e2e` | Browser scenarios against a production build |
+| `npm run test:gateway-ui` | Hosted checkout browser flow with intercepted provider fixtures |
+| `npm run test:registration-ui` | Non-demo signup, resend and password-login flow with intercepted email delivery |
 | `npm run test:performance` | Local throughput and automated checkout smoke tests |
 | `npm run test:soak` | Five-minute sustained local load test |
 
-Local verification on **5 November 2026** passed **79 domain tests, 41 database tests and 23 browser scenarios**, along with TypeScript, the production build and a Linux ARM64 Docker image build. The sustained test completed **100 paid orders over five minutes with 45 live connections**, with no failed workflows or dropped arrivals.
+Local verification on **8 November 2026** passed **152 domain tests, 87 database tests and 31 browser scenarios** (28 core, one hosted-checkout fixture and two non-demo signup scenarios), along with TypeScript, the production build and a Linux ARM64 Docker image build. All six migrations are applied to the local preview. The checks include webhook crash recovery and retry timing in a non-UTC database, persistent refund diagnostics and safe form input reset between OTP steps. Payment, email and SMS calls in these automated suites were intercepted or mocked; these checks do not establish live provider activation.
+
+Separate provider checks confirmed a Razorpay test capture and receipt of an SES test email. The test refund is still pending after a provider HTTP 400 refusal, and SES remains in its verified-recipient sandbox. See [release readiness](docs/RELEASE_READINESS.md) for the current hosted configuration and approval-dependent activation steps.
+
+The earlier sustained local test on **5 November 2026** completed **100 simulated paid orders over five minutes with 45 live connections**, with no failed workflows or dropped arrivals. It predates the live-service changes and does not establish production capacity for the current integration.
 
 Integration and browser verification use temporary databases on the project-local PostgreSQL instance. Browser and load tests require a production build and an available port `3001`; run them separately. Install Playwright Chromium with `npx playwright install chromium` if a supported browser is unavailable.
 
@@ -113,6 +129,7 @@ Docker Compose and the Render Blueprint configure the web application, backgroun
 - [Deploy on Render](docs/RENDER.md)
 - [Local setup and deployment](deployment.md)
 - [Configuration, monitoring and recovery](docs/LAUNCH_OPERATIONS.md)
+- [Live payments, OTP and AWS messaging](docs/LIVE_SERVICES.md)
 
 The readiness endpoint is `GET /api/health`. Deployment verification, operational recovery checks and verified business details must be completed before a live launch.
 

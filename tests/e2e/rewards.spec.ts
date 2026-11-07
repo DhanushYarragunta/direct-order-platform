@@ -38,7 +38,7 @@ test("coupon and points reach the payment receipt and cancellation returns the p
   await page.getByRole("button", { name: /Pay ₹/ }).click();
   await expect(page).toHaveURL(/\/orders\/[^/]+$/);
   await expect(page.getByText(`${expectedPoints} loyalty points`, { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Cancel order & refund test payment" }).click();
+  await page.getByRole("button", { name: "Cancel order & request refund" }).click();
   await expect(page.getByText(`Your ${expectedPoints} reserved points have been returned.`)).toBeVisible();
   const after = await (await page.request.get("/api/rewards")).json();
   expect(after.balance).toBe(before.balance);

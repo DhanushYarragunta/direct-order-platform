@@ -1,0 +1,44 @@
+.gateway-payment { display: grid; gap: 16px; margin: 22px 0; text-align: left; }
+.gateway-assurance { display: flex; gap: 12px; padding: 18px; background: #f4f7f1; border: 1px solid #d9e3d1; border-radius: 14px; color: #334d2f; }
+.gateway-assurance svg { flex-shrink: 0; }
+.gateway-assurance strong { font-size: 16px; }
+.gateway-assurance p { font-size: 14px; line-height: 1.6; margin: 6px 0 0; }
+.receipt-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.payment-policy { font-size: 14px; margin: 18px 0; }
+.delivery-status { font-size: 12px; color: #536050; margin: 6px 0; }
+.service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 16px; margin: 24px 0; }
+.service-card { border: 1px solid #deded5; border-radius: 16px; padding: 22px; background: #fff; }
+.service-card h2 { font-size: 18px; margin: 0 0 10px; }
+.service-card p { line-height: 1.6; margin: 8px 0; }
+.service-state { display: inline-block; border-radius: 6px; padding: 6px 10px; background: #edf4e9; color: #304c2e; font-weight: 700; font-size: 13px; }
+.service-state.attention { background: #fff3de; color: #774300; }
+.service-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0; }
+.service-metrics div { border: 1px solid #ddd; border-radius: 10px; padding: 18px; }
+.service-metrics strong { display: block; font-size: 28px; margin-bottom: 6px; }
+.service-metrics small { display: block; margin-top: 10px; color: #6d4b20; line-height: 1.5; }
+.worker-grid { margin-bottom: 0; }
+.worker-grid .service-card { min-width: 0; }
+.worker-grid h3 { margin: 0 0 12px; font-size: 17px; }
+.worker-times { display: grid; gap: 12px; margin: 18px 0 0; font-size: 14px; }
+.worker-times dt { color: #536050; margin-bottom: 4px; }
+.worker-times dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.worker-instances { margin-top: 16px; font-size: 13px; }
+.worker-instances summary { cursor: pointer; }
+.worker-instances ul { padding-left: 16px; line-height: 1.8; }
+.service-checks { padding-left: 20px; line-height: 1.8; }
+.service-issues article { display: grid; gap: 8px; padding: 16px 0; border-bottom: 1px solid #e5e5dc; overflow-wrap: anywhere; }
+.service-issues small { color: #536050; }
+.services-page > .panel { margin-top: 20px; }
+.privacy-controls > p, .contact-verification p { overflow-wrap: anywhere; }
+.privacy-controls > .check-label { display: flex; align-items: flex-start; gap: 10px; }
+.privacy-controls > .check-label input { margin-top: 5px; }
+@media (max-width: 800px) {
+  .sidebar .nav-link { font-size: 0; }
+  .sidebar .nav-link svg { display: block; flex-shrink: 0; }
+}
+@media (max-width: 650px) {
+  .sidebar .brand { flex-shrink: 0; }
+  .sidebar nav { min-width: 0; overflow-x: auto; margin-left: 16px; }
+  .sidebar .nav-link { flex-shrink: 0; }
+}
+@media (max-width: 620px) { .receipt-top { flex-wrap: wrap; gap: 14px; } .receipt-actions .button { padding: 10px 12px; } }

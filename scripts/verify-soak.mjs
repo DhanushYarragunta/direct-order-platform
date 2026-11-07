@@ -29,7 +29,8 @@ const control = new PrismaClient({ adapter: new PrismaPg({ connectionString: adm
 const abort = new AbortController(), children = new Set();
 const env = {
   ...process.env, DATABASE_URL: target.toString(), CORE_TEST_DATABASE: name,
-  CORE_INTEGRATION: "true", DEMO_MODE: "true", APP_ORIGIN: origin,
+  CORE_INTEGRATION: "true", DEMO_MODE: "true", PAYMENT_PROVIDER: "demo", APP_ORIGIN: origin,
+  TRANSACTIONAL_EMAIL_ENABLED: "false", TRANSACTIONAL_SMS_ENABLED: "false",
   PERF_BASE_URL: origin, PERF_ENVIRONMENT: "local", PERF_ACKNOWLEDGE_WRITES: "synthetic-orders-only",
   PERF_DURATION_SECONDS: String(duration),
 };

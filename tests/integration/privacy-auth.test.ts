@@ -70,18 +70,19 @@ describe.sequential("privacy and phone verification", () => {
   it("uses a one-time hashed phone code and permits only one concurrent redemption", async () => {
     const input = otpInput();
     const challenge = await requestPhoneOtp(input);
+    expect(challenge.demoCode).toMatch(/^\d{6}$/);
     const stored = await db.phoneOtp.findUniqueOrThrow({ where: { id: challenge.challengeId } });
     expect(stored.codeHash).not.toBe(challenge.demoCode);
     expect(stored.codeHash.length).toBeGreaterThan(128);
     const results = await Promise.allSettled([
-      verifyPhoneOtp({ challengeId: challenge.challengeId, code: challenge.demoCode }),
-      verifyPhoneOtp({ challengeId: challenge.challengeId, code: challenge.demoCode }),
+      verifyPhoneOtp({ challengeId: challenge.challengeId, code: challenge.demoCode! }),
+      verifyPhoneOtp({ challengeId: challenge.challengeId, code: challenge.demoCode! }),
     ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(await db.user.count({ where: { phone: input.phone } })).toBe(1);
     const user = await db.user.findUniqueOrThrow({ where: { phone: input.phone } });
-    expect(user).toMatchObject({ role: "CUSTOMER", marketingOptIn: false });
-    await expect(verifyPhoneOtp({ challengeId: challenge.challengeId, code: challenge.demoCode })).rejects.toThrow("already used");
+    expect(user).toMatchObject({ role: "CUSTOMER", marketingOptIn: false, phoneVerifiedAt: null });
+    await expect(verifyPhoneOtp({ challengeId: challenge.challengeId, code: challenge.demoCode! })).rejects.toThrow("already used");
   });
 
   it("persists failed OTP guesses, expires codes and disables phone sign-in outside demo mode", async () => {
@@ -90,15 +91,15 @@ describe.sequential("privacy and phone verification", () => {
     for (let attempt = 0; attempt < 5; attempt++)
       await expect(verifyPhoneOtp({ challengeId: challenge.challengeId, code: wrong })).rejects.toThrow("Incorrect code");
     expect((await db.phoneOtp.findUniqueOrThrow({ where: { id: challenge.challengeId } })).attempts).toBe(5);
-    await expect(verifyPhoneOtp({ challengeId: challenge.challengeId, code: challenge.demoCode })).rejects.toThrow("expired");
+    await expect(verifyPhoneOtp({ challengeId: challenge.challengeId, code: challenge.demoCode! })).rejects.toThrow("expired");
     const expired = await requestPhoneOtp(otpInput());
     await db.phoneOtp.update({ where: { id: expired.challengeId }, data: { expiresAt: new Date(0) } });
-    await expect(verifyPhoneOtp({ challengeId: expired.challengeId, code: expired.demoCode })).rejects.toThrow("expired");
+    await expect(verifyPhoneOtp({ challengeId: expired.challengeId, code: expired.demoCode! })).rejects.toThrow("expired");
     const previous = process.env.DEMO_MODE;
     try {
       process.env.DEMO_MODE = "false";
       await expect(requestPhoneOtp(otpInput())).rejects.toThrow("not enabled");
-      await expect(verifyPhoneOtp({ challengeId: expired.challengeId, code: expired.demoCode })).rejects.toThrow("not enabled");
+      await expect(verifyPhoneOtp({ challengeId: expired.challengeId, code: expired.demoCode! })).rejects.toThrow("not enabled");
     } finally { process.env.DEMO_MODE = previous; }
   });
 });

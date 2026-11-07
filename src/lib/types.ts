@@ -7,6 +7,10 @@ export type CheckoutQuote = RewardQuote & {
   deliveryFeePaise: number;
   estimateMinutes: number;
   estimateFallback: boolean;
+  estimateModelVersion?: string | null;
+  estimateTrainingSamples?: number | null;
+  estimateValidationMae?: number | null;
+  estimateBaselineMae?: number | null;
   quotedAt: string;
   minimumMinutes: number;
   minDeliveryPaise: number;
@@ -82,6 +86,7 @@ export type Order = {
   outlet: Outlet;
   status: string;
   paymentStatus: string;
+  receiptReviewRequired?: boolean;
   subtotalPaise: number;
   couponCode: string | null;
   couponDiscountPaise: number;
@@ -103,6 +108,10 @@ export type Order = {
   readyAt: string | null;
   estimateMinutes: number | null;
   estimateFallback: boolean;
+  estimateModelVersion?: string | null;
+  estimateTrainingSamples?: number | null;
+  estimateValidationMae?: number | null;
+  estimateBaselineMae?: number | null;
   expiresAt: string;
   version: number;
   lines: {
@@ -115,6 +124,6 @@ export type Order = {
     unitPaise: number;
     addOns: { id: string; name: string; pricePaise: number }[];
   }[];
-  payments: { id: string; method: string; status: string }[];
-  messages: { id: string; kind: string; body: string; createdAt: string }[];
+  payments: { id: string; method: string; status: string; provider?: string; testMode?: boolean; providerPaymentId?: string | null }[];
+  messages: { id: string; kind: string; body: string; createdAt: string; deliveries?: { channel: string; status: string }[] }[];
 };

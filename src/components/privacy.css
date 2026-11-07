@@ -15,4 +15,8 @@
 .auth-methods { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
 .auth-methods .button { flex: 1; white-space: nowrap; }
 .phone-sign-in p { margin: 0; }
+.contact-verification { margin: 24px 0; padding: 18px 0; border-block: 1px solid #d1dad4; }
+.contact-verification details { margin-top: 14px; }
+.contact-verification summary { cursor: pointer; font-weight: 600; }
+.contact-verification .form-stack { max-width: 540px; margin: 18px 0; }
 @media (max-width: 600px) { .privacy-controls { padding: 18px; } .privacy-page h2 { font-size: 21px; } }

@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   MapPin,
   CalendarHeart,
+  Settings,
 } from "lucide-react";
 import { useApp } from "./provider";
 import { request } from "@/lib/client";
@@ -24,7 +25,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
         { href: "/workspace", label: "Overview", icon: LayoutDashboard },
         { href: "/kitchen", label: "Kitchen display", icon: ChefHat },
         ...(app.user?.role === "ADMIN"
-          ? [{ href: "/workspace/menu", label: "Menu manager", icon: BookOpen }]
+          ? [{ href: "/workspace/menu", label: "Menu manager", icon: BookOpen },
+             { href: "/workspace/services", label: "Services", icon: Settings }]
           : []),
         ...(["ADMIN", "MANAGER"].includes(app.user?.role || "")
           ? [{ href: "/workspace/catering", label: "Party requests", icon: CalendarHeart }]
@@ -51,11 +53,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <p className="nav-label">
           {staff ? "RESTAURANT WORKSPACE" : "A TASTE OF HYDERABAD"}
         </p>
-        <nav>
+        <nav aria-label="Main navigation">
           {links.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
+              aria-label={label}
               className={`nav-link ${path === href ? "active" : ""}`}
             >
               <Icon size={19} />
@@ -123,9 +126,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 : path.includes("checkout")
                   ? "Checkout"
                   : path.includes("payment")
-                    ? "Test payment"
+                    ? "Payment"
                     : path === "/kitchen"
                       ? "Kitchen display"
+                      : path.includes("workspace/services")
+                        ? "Payments & communications"
                       : path.includes("workspace/menu")
                         ? "Menu manager"
                         : path.includes("catering")
@@ -154,6 +159,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <main>{children}</main>
         <footer className="footer">
           <Link href="/privacy">Privacy & account</Link>
+          <Link href="/help">Help & refunds</Link>
           <span>
             © {new Date().getFullYear()} Deccan Kitchen & Co. · Concept brand
             for Company A

@@ -38,13 +38,17 @@ export function staffOutlet(user: AuthUser, requested: string) {
     throw new AppError(403, "This outlet is outside your access");
   return requested;
 }
-export async function createSession(userId: string) {
+export async function createSession(userId: string, expectedPasswordHash: string) {
   const token = randomBytes(32).toString("hex"),
     expiresAt = new Date(Date.now() + 7 * 86400_000);
   await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id"=${userId} FOR UPDATE`;
-    const user = await tx.user.findUnique({ where: { id: userId }, select: { deletedAt: true } });
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { deletedAt: true, passwordHash: true } });
     if (!user || user.deletedAt) throw new AppError(401, "This account is no longer available");
+    // Verification happens before this transaction. Recovery may have changed
+    // credentials and revoked sessions while the sign-in request waited here.
+    if (user.passwordHash !== expectedPasswordHash)
+      throw new AppError(401, "Your account credentials changed. Please sign in again.");
     await tx.session.create({ data: { id: tokenHash(token), userId, expiresAt } });
   });
   (await cookies()).set(COOKIE, token, {

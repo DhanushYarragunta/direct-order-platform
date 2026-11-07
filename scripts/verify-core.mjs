@@ -3,10 +3,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync, appendFileSync, rmSync } from "node:fs";
+import { resolve } from "node:path";
 
+const gatewayOnly = process.argv.includes("--gateway");
+const registrationOnly = process.argv.includes("--registration");
 const performanceOnly = process.argv.includes("--performance");
-const logPath = performanceOnly ? ".local/performance.log" : ".local/verification.log";
-const reportPath = performanceOnly ? ".local/performance-verification.json" : ".local/core-verification.json";
+const logPath = registrationOnly ? ".local/registration-browser.log" : gatewayOnly ? ".local/gateway-browser.log" : performanceOnly ? ".local/performance.log" : ".local/verification.log";
+const reportPath = registrationOnly ? ".local/registration-browser.json" : gatewayOnly ? ".local/gateway-browser.json" : performanceOnly ? ".local/performance-verification.json" : ".local/core-verification.json";
 
 // Every integration/browser run gets a new database; never reset the working demo.
 const source = new URL(process.env.DATABASE_URL || "");
@@ -31,7 +34,11 @@ const env = {
   CORE_TEST_DATABASE: name,
   CORE_INTEGRATION: "true",
   DEMO_MODE: "true",
+  PAYMENT_PROVIDER: "demo",
+  TRANSACTIONAL_EMAIL_ENABLED: "false",
+  TRANSACTIONAL_SMS_ENABLED: "false",
   APP_ORIGIN: "http://127.0.0.1:3001",
+  REGISTRATION_TEST_OUTBOX: resolve(".local/registration-outbox", name),
 };
 const report = {
   startedAt: new Date().toISOString(),
@@ -79,12 +86,16 @@ try {
     "tsx",
     "prisma/seed.ts",
   ]);
-  if (!performanceOnly && !process.argv.includes("--e2e"))
+  if (!performanceOnly && !gatewayOnly && !registrationOnly && !process.argv.includes("--e2e"))
     await run("Database integration tests", [
       "node_modules/vitest/vitest.mjs",
       "run",
     ]);
-  if (performanceOnly)
+  if (registrationOnly)
+    await run("Email signup browser fixtures", ["node_modules/@playwright/test/cli.js", "test", "--config=playwright.registration.config.ts"]);
+  else if (gatewayOnly)
+    await run("Hosted checkout browser fixtures", ["node_modules/@playwright/test/cli.js", "test", "--config=playwright.gateway.config.ts"]);
+  else if (performanceOnly)
     await run("Local synthetic throughput and automated mobile checkout timing", [
       "node_modules/@playwright/test/cli.js",
       "test",
@@ -109,6 +120,7 @@ try {
       console.error(`Could not remove isolated test database ${name}.`),
     );
   await control.$disconnect();
+  if (registrationOnly) rmSync(env.REGISTRATION_TEST_OUTBOX, { recursive: true, force: true });
   report.finishedAt = new Date().toISOString();
   writeFileSync(
     reportPath,

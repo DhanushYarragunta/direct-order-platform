@@ -35,6 +35,36 @@ This is a base estimate, not a spending cap. Taxes, bandwidth/pipeline overages,
 
 Automatic deploys are disabled in this review Blueprint. After a later push, manually deploy the latest commit for **both** web and worker. If you change the Blueprint configuration, sync that change in Render as well. The files do not provision anything until you create/sync the Blueprint. See [Render's Blueprint setup](https://render.com/docs/infrastructure-as-code) and [deploy lifecycle](https://render.com/docs/deploys).
 
+## Upgrade the existing deployment
+
+Use the existing services for an upgrade; creating another Blueprint would create another set of chargeable resources. First verify the release commit in GitHub Actions, including the hosted-checkout fixture. Deploy that same commit to web and worker and allow the pre-deploy migration step to finish. This release includes live-service tables, worker-status reports and a durable Razorpay webhook inbox; running the old worker alongside the new web release leaves new payment events unprocessed.
+
+Check `/api/health` and `/api/auth/methods` on the deployed origin. Both should return HTTP 200; the latter should report the configured sign-in methods without credentials. Sign in and open **Workspace → Services** to confirm fresh worker reports. Complete customer signup, a payment, the kitchen stages and receipt download against the deployed release. Exercise a signed provider webhook and processed refund when using configured Razorpay test keys. A successful health response alone does not verify these flows.
+
+## Controlled staging with Razorpay test payments and SES
+
+The checked-in Blueprint keeps payments simulated and outbound order messages disabled by default for the public demo. Its explicit settings are reapplied when the Blueprint is synced. Keep a separate database for real-contact staging; do not convert the seeded shared demo database into a customer identity store. Configure staging runtime values in both existing target services only after selecting that database. No staging resources are created by these instructions.
+
+| Setting | Staging value or source |
+| --- | --- |
+| `DATABASE_URL` | Isolated staging database with migrations applied and no demo identities |
+| `APP_ORIGIN` | Exact canonical HTTPS web origin, identical in web and worker |
+| `DEMO_MODE`, `ALLOW_PUBLIC_DEMO` | `false` |
+| `ALLOW_PUBLIC_TEST_PAYMENTS` | `true` |
+| `PAYMENT_PROVIDER` | `razorpay` |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Matching test-mode credentials in protected runtime settings |
+| `RAZORPAY_WEBHOOK_SECRET` | Secret for the test-mode webhook at `/api/payments/razorpay/webhook` |
+| `PRIVACY_CONTACT`, `SUPPORT_EMAIL` | Real operator contacts |
+| `EMAIL_PROVIDER`, `AWS_REGION`, `EMAIL_FROM` | `ses`, the verified identity's region, and approved sender |
+| AWS credentials | Scoped runtime credentials through the AWS default credential chain; rotate expiring sessions |
+| `TRANSACTIONAL_EMAIL_ENABLED` | `true` for the controlled order-email test |
+| `TRANSACTIONAL_SMS_ENABLED` | `false` until the SMS sender and templates are approved |
+| `RUN_BACKGROUND_JOBS` | `false` in web; run the separate worker continuously |
+
+Render does not automatically inherit local AWS CLI credentials. Configure the runtime credential chain explicitly without adding secrets to `render.yaml`, Docker build arguments or Git. Keep web and worker provider settings synchronized. The Blueprint's demo values must be removed or changed in a reviewed staging configuration before a future sync; dashboard edits alone are not durable Blueprint configuration.
+
+SES sandbox recipients must be verified in the same region. An individually verified email address permits limited testing; use a domain you control with SES DKIM records and request regional production access before ordinary customer email. Test delivery and inbox placement after DNS verification. A Razorpay test capture does not confirm live merchant activation or processed refunds. Complete the controlled acceptance checklist in [LIVE_SERVICES.md](LIVE_SERVICES.md#verification-before-live-activation). Live launch additionally requires disabling `ALLOW_PUBLIC_TEST_PAYMENTS`, activating the merchant account and using corresponding live keys/webhook settings.
+
 ## Origin, secrets and storage
 
 `APP_ORIGIN` self-references the web service's `RENDER_EXTERNAL_URL`. This supported Render feature resolves the actual assigned HTTPS URL; the application does not guess a hostname or trust request headers. For a custom domain, set `APP_ORIGIN` to that exact HTTPS origin and update the Blueprint reference so a later sync does not undo it. Use one canonical origin for login and checkout. Sources: [self-referencing environment variables](https://render.com/docs/blueprint-spec#self-referencing-environment-variables), [Render's default variables](https://render.com/docs/environment-variables).
@@ -45,6 +75,6 @@ A Render persistent disk is attached to one service instance. It prevents horizo
 
 ## What remains after deployment
 
-A green deployment confirms hosting, not business launch readiness. Verify the real deployed topology, alerts and backup restoration; run sustained traffic against it before making capacity claims. Human checkout timing and tablet readability need direct observation. Public demo switches must be disabled before accepting real customer data, and the operator must supply verified licences, a privacy contact and an approved retention schedule. Real payment and SMS gateways remain outside this demo's scope.
+A green deployment confirms hosting, not business launch readiness. Verify the real deployed topology, alerts and backup restoration; run sustained traffic against it before making capacity claims. Human checkout timing and tablet readability need direct observation. Public demo switches must be disabled before accepting real customer data, and the operator must supply verified licences, a privacy contact and an approved retention schedule. Payment and email/SMS integrations are implemented; live use still requires provider approvals and completed acceptance checks.
 
 The configuration uses fields verified in the [official Blueprint specification](https://render.com/docs/blueprint-spec). Local schema validation can check structure; only Render's actual deployment and the checks above confirm the host configuration works.

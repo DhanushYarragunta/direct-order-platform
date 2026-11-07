@@ -18,4 +18,12 @@ describe("security response policy", () => {
     expect(securityHeaders("token", true, false)["Content-Security-Policy"]).toContain("ws: wss:");
     expect(securityHeaders("token", false, false)["Content-Security-Policy"]).not.toContain("ws:");
   });
+  it("permits the hosted gateway only on explicitly enabled payment responses", () => {
+    const payment = securityHeaders("payment-nonce", false, true, true);
+    expect(payment["Content-Security-Policy"]).toContain("frame-src https://*.razorpay.com");
+    expect(payment["Content-Security-Policy"]).toContain("'nonce-payment-nonce'");
+    expect(payment["Content-Security-Policy"]).not.toContain("'unsafe-eval'");
+    expect(payment["Permissions-Policy"]).toContain('"https://api.razorpay.com"');
+    expect(securityHeaders("ordinary", false, true)["Content-Security-Policy"]).toContain("frame-src 'none'");
+  });
 });

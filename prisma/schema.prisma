@@ -30,6 +30,7 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+  REFUND_PENDING
 }
 
 enum CateringStatus {
@@ -44,6 +45,8 @@ model User {
   email         String    @unique
   phone         String?   @unique
   deletedAt     DateTime?
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
   name          String
   passwordHash  String
   role          Role      @default(CUSTOMER)
@@ -165,6 +168,16 @@ model Order {
   note         String
   promisedAt   DateTime?
   originalPromisedAt DateTime?
+  estimateSource String?
+  estimateModelVersion String?
+  estimateQueueWork Int?
+  estimateStations Int?
+  estimateMinimumMinutes Int?
+  estimateHour Float?
+  estimateRawMinutes Float?
+  estimateTrainingSamples Int?
+  estimateValidationMae Float?
+  estimateBaselineMae Float?
   estimateMinutes Int?
   estimateFallback Boolean @default(false)
   expiresAt    DateTime
@@ -175,6 +188,7 @@ model Order {
   version      Int @default(0)
   lines        OrderLine[]
   payments     Payment[]
+  gatewayOrder GatewayOrder?
   messages     Message[]
   audits       Audit[]
   loyaltyEntries LoyaltyEntry[]
@@ -183,6 +197,7 @@ model Order {
   @@index([userId, createdAt])
   @@index([status, expiresAt])
   @@index([createdAt, outletId])
+  @@index([outletId, estimateSource, placedAt])
 }
 
 model MenuCityPrice {
@@ -267,6 +282,16 @@ model Payment {
   order       Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   attemptKey  String
   method      String
+  provider String @default("demo")
+  testMode Boolean @default(true)
+  providerPaymentId String? @unique
+  providerRefundId String? @unique
+  refundReviewRequired Boolean @default(false)
+  providerRefundedPaise Int @default(0)
+  refundReason String?
+  refundNextAttemptAt DateTime?
+  refundLeaseUntil DateTime?
+  refundAttempts Int @default(0)
   status      PaymentStatus
   amountPaise Int
   resolveAt   DateTime?
@@ -274,6 +299,7 @@ model Payment {
   updatedAt   DateTime @updatedAt
   @@unique([orderId, attemptKey])
   @@index([status, resolveAt])
+  @@index([provider, status, refundNextAttemptAt])
 }
 
 model Message {
@@ -281,6 +307,7 @@ model Message {
   orderId   String
   order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   kind      String
+  deliveries MessageDelivery[]
   body      String
   createdAt DateTime @default(now())
   @@unique([orderId, kind])
@@ -306,6 +333,10 @@ model RateLimit {
 
 model PhoneOtp {
   id String @id
+  provider String @default("demo")
+  providerId String?
+  userId String?
+  purpose String @default("sign_in")
   phone String
   codeHash String
   name String
@@ -328,4 +359,93 @@ model ChannelBaseline {
   source String
   recordedAt DateTime @default(now())
   @@unique([outletId, periodStart, periodEnd])
+}
+
+model GatewayOrder {
+  testMode Boolean @default(true)
+  id String @id @default(cuid())
+  orderId String @unique
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  receipt String @unique
+  providerOrderId String? @unique
+  leaseUntil DateTime?
+  nextCheckAt DateTime @default(now())
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([nextCheckAt])
+}
+
+model EmailOtp {
+  id String @id
+  email String
+  codeHash String
+  name String
+  consentAt DateTime
+  marketingOptIn Boolean @default(false)
+  attempts Int @default(0)
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+  provider String @default("demo")
+  userId String?
+  purpose String @default("sign_in")
+  @@index([expiresAt])
+}
+
+model MessageDelivery {
+  provider String @default("legacy")
+  id String @id @default(cuid())
+  messageId String
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  channel String
+  status String @default("PENDING")
+  providerId String?
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  recipientHash String?
+  firstAttemptAt DateTime?
+  leaseToken String?
+  leasedUntil DateTime?
+  lastErrorCode String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([messageId, channel])
+  @@index([status, nextAttemptAt])
+}
+
+model WorkerStatus {
+  id String @id @default(cuid())
+  processId String
+  job String
+  startedAt DateTime?
+  finishedAt DateTime?
+  succeededAt DateTime?
+  failedAt DateTime?
+  consecutiveFailures Int @default(0)
+  lastErrorCode String?
+  updatedAt DateTime @updatedAt
+  @@unique([processId, job])
+  @@index([updatedAt])
+}
+
+model GatewayWebhook {
+  id String @id @default(cuid())
+  dedupeKey String @unique
+  event String
+  paymentId String?
+  refundId String?
+  refundPaymentId String?
+  testMode Boolean
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  leaseToken String?
+  leasedUntil DateTime?
+  lastErrorCode String?
+  receivedAt DateTime @default(now())
+  processedAt DateTime?
+  updatedAt DateTime @updatedAt
+  @@index([status, testMode, nextAttemptAt])
+  @@index([status, leasedUntil])
 }

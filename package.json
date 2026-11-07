@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack --hostname 127.0.0.1",
     "build": "prisma generate && next build --webpack",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "node scripts/start-production.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -21,9 +21,14 @@
     "test:integration": "node --env-file=.env scripts/verify-core.mjs --integration",
     "verify:core": "npm run db:migrate && npm run db:seed && npm run check && node --env-file=.env scripts/verify-core.mjs",
     "test:soak": "node --env-file=.env scripts/verify-soak.mjs",
-    "package:source": "node scripts/package-source.mjs"
+    "package:source": "node scripts/package-source.mjs",
+    "test:gateway-ui": "node --env-file=.env scripts/verify-core.mjs --gateway",
+    "test:registration-ui": "node --env-file=.env scripts/verify-core.mjs --registration"
   },
   "dependencies": {
+    "@aws-sdk/client-pinpoint-sms-voice-v2": "^3.1162.0",
+    "@aws-sdk/client-sesv2": "^3.1162.0",
+    "@pdf-lib/fontkit": "^1.1.1",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -32,8 +37,10 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
     "next": "16.4.4",
+    "pdf-lib": "^1.17.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "regenerator-runtime": "^0.14.1",
     "sharp": "0.35.5",
     "tailwind-merge": "^3.3.1",
     "zod": "4.6.7"

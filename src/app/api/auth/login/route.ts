@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const valid = verifyPassword(input.password, user?.passwordHash || dummy);
     if (!user || user.deletedAt || !valid)
       throw new AppError(401, "Email or password is incorrect");
-    await createSession(user.id);
+    await createSession(user.id, user.passwordHash);
     return { ok: true, role: user.role };
   });
 }

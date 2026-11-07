@@ -10,7 +10,7 @@ export async function assertAccountActive(tx: Prisma.TransactionClient, userId: 
 
 export async function accountPreferences(userId: string) {
   return db.user.findUniqueOrThrow({ where: { id: userId }, select: {
-    name: true, email: true, phone: true, marketingOptIn: true, consentAt: true, createdAt: true,
+    name: true, email: true, phone: true, emailVerifiedAt: true, phoneVerifiedAt: true, marketingOptIn: true, consentAt: true, createdAt: true,
   } });
 }
 
@@ -30,7 +30,7 @@ export async function updateMarketing(userId: string, marketingOptIn: boolean) {
 export async function exportAccount(userId: string) {
   const [profile, orders, catering, loyalty, consentHistory] = await db.$transaction([
     db.user.findUniqueOrThrow({ where: { id: userId }, select: {
-      id: true, name: true, email: true, phone: true, role: true, createdAt: true, consentAt: true, marketingOptIn: true,
+      id: true, name: true, email: true, phone: true, emailVerifiedAt: true, phoneVerifiedAt: true, role: true, createdAt: true, consentAt: true, marketingOptIn: true,
     } }),
     db.order.findMany({ where: { userId }, include: { lines: true, payments: true, messages: true }, orderBy: { createdAt: "asc" } }),
     db.cateringRequest.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
@@ -79,9 +79,11 @@ export async function deleteAccount(user: AuthUser) {
     await tx.loyaltyEntry.deleteMany({ where: { userId: user.id } });
     await tx.session.deleteMany({ where: { userId: user.id } });
     if (profile.phone) await tx.phoneOtp.deleteMany({ where: { phone: profile.phone } });
+    await tx.phoneOtp.deleteMany({ where: { userId: user.id } });
+    await tx.emailOtp.deleteMany({ where: { OR: [{ email: profile.email }, { userId: user.id }] } });
     await tx.user.update({ where: { id: user.id }, data: {
       name: "Deleted customer", email: `deleted-${randomBytes(18).toString("hex")}@account.invalid`,
-      phone: null, passwordHash: "disabled", marketingOptIn: false, consentAt: null, deletedAt: new Date(),
+      phone: null, phoneVerifiedAt: null, emailVerifiedAt: null, passwordHash: "disabled", marketingOptIn: false, consentAt: null, deletedAt: new Date(),
     } });
     await tx.audit.create({ data: { actorId: user.id, action: "ACCOUNT_ANONYMIZED",
       detail: "Customer requested deletion. Contact data removed; financial totals and status records retained.",
@@ -92,4 +94,5 @@ export async function deleteAccount(user: AuthUser) {
 
 export async function cleanExpiredOtp() {
   await db.phoneOtp.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+  await db.emailOtp.deleteMany({ where: { expiresAt: { lt: new Date() } } });
 }

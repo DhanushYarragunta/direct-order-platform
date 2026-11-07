@@ -19,7 +19,7 @@ Read `docs/TECHNICAL_DESIGN.md`; use `docs/RENDER.md` for self-deployment. Gener
 
 Run `npm run verify:core` to reproduce all checks against an isolated test database. The command migrates and non-destructively seeds the working demo, then runs type checks, domain tests, a production build, database integration tests and browser checks. Screenshots and the machine-readable result are under `.local/`.
 
-The optional assessment package can be regenerated after browser verification with `scripts/build-tdd.py`; generated PDFs and ZIPs were removed during folder cleanup. Render self-deployment files are ready, but public hosting has not been provisioned. The previous feature checkpoint is public; quality changes are committed locally after checks. Review the focused commits before pushing them; generated binaries, duplicate photos and previews are excluded from Git.
+The optional assessment package can be regenerated after browser verification with `scripts/build-tdd.py`; generated PDFs and ZIPs were removed during folder cleanup. An existing Render deployment is available, but its web and worker releases must be checked against the reviewed commit. Local changes are not published automatically. Follow the upgrade and staging instructions in `docs/RENDER.md`; generated binaries, duplicate photos and previews are excluded from Git.
 
 ## Quality fixes to exercise
 
@@ -27,6 +27,11 @@ The optional assessment package can be regenerated after browser verification wi
 - At 1024px tablet width check 30px ticket IDs, 26px timers, 24px item names and readable modifiers. Enable sound/wake lock with a tap. Disconnect the network and observe offline/last-synced and disabled writes; reconnect. Use the physical protocol in ACCEPTANCE_TESTING.md before claiming two-metre readability.
 - On mobile, dishes appear ahead of the promotional hero and allergens are at least 14px. Verify all seven dish photos and the photo-credit page.
 - Admin menu: upload a JPEG/PNG/WebP, edit delivery rules, and inspect the licence declaration workflow. Zero-prefixed demo values cannot be declared verified.
-- Privacy: export your customer data, withdraw marketing permission and anonymize an account with no active orders. Phone-code login is explicitly a demo simulation.
+- Privacy: export your customer data, withdraw marketing permission and anonymize an account with no active orders. Email and phone codes are simulated in demo mode; configured production providers verify real ownership.
 - Reports: compare the existing repeat-purchaser count with eligible/pending 30-day cohorts. Record a completed-period app-order baseline for one outlet and verify the direct/app denominator. Timings exclude absent measurements and distinguish demo from live browser samples.
 - Run the isolated five-minute `npm run test:soak`; it adds evidence, not a production-capacity claim. Use the one-hour staging and human-study procedures before launch.
+
+
+## Live-services review
+
+This release adds hosted Razorpay payments/refunds, authenticated PDF receipts, email/SMS code sign-in and contact verification, AWS messaging adapters, and administrator service diagnostics. **Workspace → Services** reports configured services, independent worker activity, queue ages and payment recovery references. Refresh after stopping the only worker: reports become stale after 90 seconds; restart it and refresh to observe recovery. In local development jobs may run inside the web process, so use a separate worker with `RUN_BACKGROUND_JOBS=false` on the web process for that exercise. Provider transport is mocked in automated tests; account credentials, sender/merchant approval and controlled live acceptance remain required. Follow [LIVE_SERVICES.md](LIVE_SERVICES.md). The learned preparation model is validated against chronological held-out history and falls back until eligible live data exists.

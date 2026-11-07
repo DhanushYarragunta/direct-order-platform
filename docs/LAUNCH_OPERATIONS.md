@@ -25,7 +25,7 @@ The migration service must finish successfully before the web and worker start. 
 
 The container runs as the unprivileged `node` user. The web port binds only to host loopback. Configure a TLS reverse proxy for external access, with request body and connection limits and SSE buffering disabled. A public demo requires HTTPS, `DEMO_MODE=true` and the explicit `ALLOW_PUBLIC_DEMO=true` acknowledgement. Shared demo accounts and on-screen OTPs are intentionally insecure for real customer identity; the demo must only contain sample data. A live deployment uses `DEMO_MODE=false` and a real `PRIVACY_CONTACT`.
 
-The supplied gateway and phone-code delivery are simulated. Email/password access works with demo mode off, but real payment/SMS services are not implemented or claimed. Mock payments and messages satisfy the assessment scope; turning off a demo is not a live gateway implementation.
+The application now includes Razorpay payments/refunds, PDF receipts, Amazon SES email and AWS End User Messaging SMS, with Resend/Twilio alternatives. Demo mode remains available. Live operation requires provider credentials, merchant/sender approvals and controlled acceptance checks; see [live service setup](LIVE_SERVICES.md). Both web and worker must use the same provider configuration.
 
 ## Host configuration and scaling
 
@@ -48,7 +48,9 @@ One Node process shares revision polling among clients for the same audience/out
 
 `GET /api/health` returns only `{ "status": "ok", "database": "reachable" }` on success; failed or slow database access returns HTTP 503. It does not expose credentials or host configuration. Treat this as readiness, not proof that payments, backups, TLS or the entire business operation work.
 
-The separate worker becomes unhealthy when its last successful loop is more than 30 seconds old. Docker's `restart: unless-stopped` handles exited processes; a monitoring system must alert on an unhealthy process, database failure, failing migrations, disk growth and backup age. Test those alerts on the chosen host. The application does not provision monitoring services automatically.
+The separate worker becomes unhealthy when its last successful order-maintenance loop is more than 30 seconds old. Docker's `restart: unless-stopped` handles exited processes; a monitoring system must alert on an unhealthy process, database failure, failing migrations, disk growth and backup age. Test those alerts on the chosen host. The application does not provision monitoring services automatically.
+
+The administrator's **Workspace → Services** page also reads durable per-process reports for order maintenance, payment reconciliation and notification delivery. It shows recent failures, stale or stalled tasks, queue ages and payment recovery references. Apply the `WorkerStatus` migration before restarting the updated processes. A completed pass is not confirmation of provider delivery, and current reports cannot establish whether every expected replica is alive. See [background processing diagnostics](LIVE_SERVICES.md#diagnose-background-processing) for thresholds, retention and interpretation.
 
 Before accepting traffic:
 
@@ -81,8 +83,8 @@ The public `/privacy` page describes actual collection and retention behavior an
 
 Deletion requires typing `DELETE`, refuses outstanding fulfilment or future confirmed catering, strips contact fields, notes and messages, clears loyalty, disables sign-in and revokes all sessions transactionally. Financial totals, item snapshots, timestamps and anonymous identifiers remain for accounting and aggregate reports. Staff cannot delete their account through customer tools. Completed order history currently has no automatic age-based deletion; choose and implement the business-approved schedule before collecting real customer data. The application does not assert legal compliance from the presence of a privacy page.
 
-Demo phone login uses random six-digit codes, scrypt hashes, a five-minute expiry, five verification attempts, request limits and one-time consumption. A new request invalidates previous codes for the number. Failed attempts are committed even when verification fails. Codes appear on screen only in demo mode; the non-demo endpoint fails closed until real delivery/ownership verification is implemented. Marketing opt-in is optional and off by default. Existing accounts' preferences do not change merely by signing in again.
+Demo phone login uses random six-digit codes, scrypt hashes, a five-minute expiry, five verification attempts, request limits and one-time consumption. A new request invalidates previous codes for the number. Failed attempts are committed even when verification fails. Codes appear on screen only in demo mode; non-demo phone sign-in requires configured AWS SMS or Twilio Verify and establishes ownership only after successful verification. Marketing opt-in is optional and off by default. Existing accounts' preferences do not change merely by signing in again.
 
 ## CI and evidence
 
-`.github/workflows/verify.yml` installs locked dependencies on Node 22, generates Prisma, runs domain tests/type checking/build, provisions PostgreSQL 16 on loopback port 55432, runs isolated database/browser verification, and builds the Docker image. It retains test results and screenshots for seven days. A workflow file is not a successful workflow run: check its actual GitHub result after pushing. There is no automatic production deployment or secret configuration in this workflow.
+`.github/workflows/verify.yml` installs locked dependencies on Node 22, generates Prisma, runs domain tests/type checking/build, provisions PostgreSQL 16 on loopback port 55432, runs isolated database/browser verification plus hosted-checkout and non-demo registration browser fixtures, and builds the Docker image. The browser suites run sequentially because they share a port. It retains test results and screenshots for seven days. Provider calls are mocked in CI. A workflow file is not a successful workflow run: check its actual GitHub result after pushing. There is no automatic production deployment or secret configuration in this workflow.

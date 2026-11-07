@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     );
     const user = await db.user.findUnique({ where: { id: `demo-${account}` } });
     if (!user || user.deletedAt) throw new AppError(503, "This demo account is unavailable");
-    await createSession(user.id);
+    await createSession(user.id, user.passwordHash);
     return { ok: true, role: user.role };
   });
 }

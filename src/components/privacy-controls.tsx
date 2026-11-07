@@ -4,13 +4,25 @@ import { useEffect, useState } from "react";
 import { request } from "@/lib/client";
 import { useApp } from "./provider";
 import { ErrorNotice } from "./ui";
+import { CodeSignIn, type CommunicationMethods } from "./code-sign-in";
 
-type Preferences = { name: string; email: string; phone: string | null; marketingOptIn: boolean; consentAt: string | null };
+type Preferences = { name: string; email: string; phone: string | null; emailVerifiedAt: string | null; phoneVerifiedAt: string | null; marketingOptIn: boolean; consentAt: string | null };
 
 export function PrivacyControls() {
   const app = useApp();
   const [data, setData] = useState<Preferences | null>(null), [error, setError] = useState("");
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
+  const [methods, setMethods] = useState<CommunicationMethods | null>(null);
+  useEffect(() => {
+    let active = true;
+    void request<CommunicationMethods>("/api/auth/methods").then(value => { if (active) setMethods(value); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
+  async function contactVerified() {
+    await app.refreshUser();
+    setData(await request<Preferences>("/api/account"));
+    setMessage(app.demoMode ? "Demo contact saved. Live ownership has not been verified." : "Contact verified. Future order updates can use this contact when delivery is enabled.");
+  }
   useEffect(() => {
     let cancelled = false;
     if (app.user) void request<Preferences>("/api/account").then((value) => { if (!cancelled) setData(value); })
@@ -64,6 +76,14 @@ export function PrivacyControls() {
       <p>Signed in as <strong>{data.name}</strong>{data.phone ? ` · ${data.phone}` : ` · ${data.email}`}.</p>
       <label className="check-label"><input type="checkbox" checked={data.marketingOptIn} disabled={busy} onChange={(e) => void marketing(e.target.checked)} /><span>Send me offers and kitchen news. Optional; switch off to withdraw consent immediately.</span></label>
       <p>Order confirmations and preparation updates are needed to fulfil your orders and are separate from marketing.</p>
+      {app.user.role === "CUSTOMER" && <div className="contact-verification">
+        <h3>Verified contacts for order updates</h3>
+        <p>Email: {data.email.endsWith(".invalid") ? "not added" : data.email} · {data.emailVerifiedAt ? "Verified" : "Not verified"}<br />Phone: {data.phone || "not added"} · {data.phoneVerifiedAt ? "Verified" : "Not verified"}</p>
+        <p>Live updates use these verified contacts. A delivery phone number entered at checkout does not verify ownership.</p>
+        {(app.demoMode || methods?.emailCode) && <details><summary>Add or verify email</summary><CodeSignIn channel="email" demoMode={app.demoMode} complete={contactVerified} purpose="verify_contact" name={data.name} value={data.email} /></details>}
+        {(app.demoMode || methods?.phoneCode) && <details><summary>Add or verify mobile number</summary><CodeSignIn channel="phone" demoMode={app.demoMode} complete={contactVerified} purpose="verify_contact" name={data.name} value={data.phone || ""} /></details>}
+        {!app.demoMode && methods && !methods.emailCode && !methods.phoneCode && <p>Contact verification is not enabled yet.</p>}
+      </div>}
       <button type="button" className="button" disabled={busy} onClick={() => void download()}>Download my account data</button>
       {app.user.role === "CUSTOMER" && <details className="privacy-delete">
         <summary>Delete my customer account</summary>
