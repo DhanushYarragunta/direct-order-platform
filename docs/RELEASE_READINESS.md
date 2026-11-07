@@ -22,7 +22,7 @@ No service, database, region or plan will be deleted, recreated or changed. Exis
 
 | Setting/action | Proposed value or purpose |
 | --- | --- |
-| Docker Command | `sh -c 'node node_modules/prisma/build/index.js migrate deploy && node scripts/start-production.mjs'` so additive migrations complete before the new application starts |
+| Docker Command | `node scripts/start-render.mjs` so additive migrations complete before the new application starts; a dedicated script avoids Render's Docker command quote parsing |
 | `DEMO_MODE` | `false` |
 | `PAYMENT_PROVIDER` | `razorpay` |
 | `ALLOW_PUBLIC_TEST_PAYMENTS` | `true`, with no real-money checkout |
