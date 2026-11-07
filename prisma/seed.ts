@@ -2,6 +2,7 @@ import { db } from "../src/lib/db";
 import { hashPassword } from "../src/lib/password";
 import { gstIncluded } from "../src/lib/domain";
 import { seedDepth } from "./seed-depth";
+import menuCatalog from "./catalog/menu.json";
 
 async function seed() {
   if (process.env.DEMO_MODE !== "true" || !process.env.DEMO_PASSWORD)
@@ -49,103 +50,7 @@ async function seed() {
     });
     await db.outlet.updateMany({ where: { id: outlet.id, fssai: "DEMO — licence pending verification" }, data: { fssai, fssaiVerified: false } });
   }
-  const menu = [
-    {
-      id: "chicken-biryani",
-      name: "Chicken dum biryani",
-      description:
-        "Tender chicken, fragrant basmati and our signature blend of slow-cooked spices.",
-      category: "Biryani",
-      pricePaise: 32000,
-      familyPricePaise: 90000,
-      portion: "Regular · serves 1",
-      vegetarian: false,
-      spice: "Medium",
-      allergens: ["milk"],
-      photo: "/food/chicken-biryani.jpg",
-      prepMinutes: 18,
-      featured: true,
-      active: true,
-    },
-    {
-      id: "vegetable-biryani",
-      name: "Vegetable biryani",
-      description:
-        "Seasonal vegetables and long-grain basmati, layered with herbs and golden onions.",
-      category: "Biryani",
-      pricePaise: 26000,
-      familyPricePaise: null,
-      portion: "Regular · serves 1",
-      vegetarian: true,
-      spice: "Medium",
-      allergens: ["milk", "cashew"],
-      photo: "/food/vegetable-biryani.jpg",
-      prepMinutes: 15,
-      featured: false,
-      active: true,
-    },
-    {
-      id: "mirchi-ka-salan",
-      name: "Mirchi ka salan",
-      description:
-        "A Hyderabadi classic: green chillies in a rich, tangy peanut and sesame gravy.",
-      category: "Sides",
-      pricePaise: 12000,
-      familyPricePaise: null,
-      portion: "250 ml · serves 1–2",
-      vegetarian: true,
-      spice: "Hot",
-      allergens: ["peanut", "sesame"],
-      photo: "/food/mirchi-ka-salan.jpg",
-      prepMinutes: 5,
-      featured: false,
-      active: true,
-    },
-    {
-      id: "double-ka-meetha",
-      name: "Double ka meetha",
-      description:
-        "Golden bread, saffron milk and toasted nuts. A sweet little piece of the old city.",
-      category: "Sweets",
-      pricePaise: 14000,
-      familyPricePaise: null,
-      portion: "150 g · serves 1",
-      vegetarian: true,
-      spice: "Sweet",
-      allergens: ["wheat", "milk", "almond", "cashew"],
-      photo: "/food/double-ka-meetha.jpg",
-      prepMinutes: 4,
-      featured: false,
-      active: true,
-    },
-    {
-      id: "mutton-haleem",
-      name: "Mutton haleem",
-      description:
-        "Slow-cooked mutton and wheat with fragrant spices, herbs and golden onions.",
-      category: "Sides",
-      pricePaise: 35000,
-      familyPricePaise: null,
-      portion: "Regular",
-      vegetarian: false,
-      spice: "Medium",
-      allergens: ["wheat", "milk", "egg"],
-      photo: "/food/mutton-haleem.jpg",
-      prepMinutes: 20,
-      featured: false,
-      active: true,
-    },
-    {
-      id: "cucumber-raita", name: "Cucumber raita", description: "Cool yoghurt, crisp cucumber and roasted cumin. A refreshing side for your biryani.",
-      category: "Sides", pricePaise: 8000, familyPricePaise: null, portion: "200 ml · serves 1–2", vegetarian: true,
-      spice: "Mild", allergens: ["milk"], photo: "/food/cucumber-raita.jpg", prepMinutes: 3, featured: false, active: true,
-    },
-    {
-      id: "gulab-jamun", name: "Gulab jamun", description: "Soft milk dumplings soaked in warm cardamom syrup. Two pieces to finish your meal.",
-      category: "Sweets", pricePaise: 10000, familyPricePaise: null, portion: "2 pieces · serves 1", vegetarian: true,
-      spice: "Sweet", allergens: ["milk", "wheat"], photo: "/food/gulab-jamun.jpg", prepMinutes: 3, featured: false, active: true,
-    },
-  ];
+  const menu = menuCatalog.items;
   // Upgrade only the exact untouched historical demo placeholder, preserving admin edits.
   await db.menuItem.updateMany({ where: { id: "mutton-haleem", photo: null, active: false, description: "Slow-cooked mutton and wheat. Seasonal sample dish, currently off the menu." },
     data: { photo: "/food/mutton-haleem.jpg", active: true, allergens: ["wheat", "milk", "egg"], description: menu.find(item => item.id === "mutton-haleem")!.description } });

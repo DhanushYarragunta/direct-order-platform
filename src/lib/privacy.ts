@@ -78,6 +78,7 @@ export async function deleteAccount(user: AuthUser) {
     } });
     await tx.loyaltyEntry.deleteMany({ where: { userId: user.id } });
     await tx.session.deleteMany({ where: { userId: user.id } });
+    await tx.passwordReset.deleteMany({ where: { userId: user.id } });
     if (profile.phone) await tx.phoneOtp.deleteMany({ where: { phone: profile.phone } });
     await tx.phoneOtp.deleteMany({ where: { userId: user.id } });
     await tx.emailOtp.deleteMany({ where: { OR: [{ email: profile.email }, { userId: user.id }] } });
@@ -95,4 +96,5 @@ export async function deleteAccount(user: AuthUser) {
 export async function cleanExpiredOtp() {
   await db.phoneOtp.deleteMany({ where: { expiresAt: { lt: new Date() } } });
   await db.emailOtp.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+  await db.passwordReset.deleteMany({ where: { expiresAt: { lt: new Date() } } });
 }

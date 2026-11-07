@@ -8,12 +8,14 @@ The local tests replace provider calls with fixtures. They verify application be
 
 | Mode | Configuration and behaviour |
 | --- | --- |
-| Local demonstration | `DEMO_MODE=true`, `PAYMENT_PROVIDER=demo`. Payments and communication deliveries are simulated. Codes appear on screen and never establish live contact ownership. |
+| Local demonstration | `DEMO_MODE=true`, `PAYMENT_PROVIDER=demo`. Payments and communication deliveries are simulated. Authenticated contact-verification codes may appear on screen and never establish live ownership. Password reset is unavailable in this mode; reset codes are never displayed. |
 | Hosted payment testing | `PAYMENT_PROVIDER=razorpay` with Razorpay test keys and a matching test webhook. The application uses the real hosted Checkout integration in the provider's test mode. Live Razorpay keys are rejected when demo mode is enabled. |
 | Public staging with real email | `DEMO_MODE=false`, HTTPS `APP_ORIGIN`, `PAYMENT_PROVIDER=razorpay`, Razorpay test keys and `ALLOW_PUBLIC_TEST_PAYMENTS=true`. Use real customer sign-in and configured email delivery. Test payments do not collect real money. |
 | Live customers | `DEMO_MODE=false`, HTTPS `APP_ORIGIN`, Razorpay live account/keys, configured customer verification, verified business details, and the required operational checks. |
 
-Start with SES email verification and email order updates when minimizing communication spend. Keep transactional SMS disabled until it is needed and its sender/templates are approved. Email/phone code sign-in becomes available when that channel's required configuration is present; `TRANSACTIONAL_EMAIL_ENABLED` and `TRANSACTIONAL_SMS_ENABLED` control **order updates**, not the code-request endpoints. Configured email-code sign-in is the initial live sign-in method; password and configured phone sign-in remain available.
+Normal sign-in uses an email address or stored Indian mobile number plus a password. Codes are used for signup verification, authenticated contact verification and **Forgot password**, not ordinary sign-in. Start with SES email verification/recovery and email order updates when minimizing communication spend. Keep SMS disabled until its sender and templates are approved. `TRANSACTIONAL_EMAIL_ENABLED` and `TRANSACTIONAL_SMS_ENABLED` control **order updates**; configured verification/recovery endpoints can send codes independently of those switches.
+
+For the current demonstration project, the AWS SMS account in `ap-south-1` is in the sandbox with no registrations or sender IDs. SMS recovery and contact verification are implemented and tested with mocked providers, but real SMS delivery is unavailable. No SMS account settings or sender resources have been enabled. The interface offers email recovery when SMS is unavailable. SES remains in its sandbox, so real email tests are limited to verified recipients until SES production access is approved. The public Render database keeps `DEMO_MODE=false`; the project's demonstration purpose does not enable shared demo identities or fake recovery codes there.
 
 Never copy demonstration customer identities into a live customer database. Demo verification leaves `emailVerifiedAt` and `phoneVerifiedAt` unset.
 
@@ -42,7 +44,7 @@ Use the hosting platform's protected runtime settings. `.env.example` lists conf
 | `AWS_SMS_MAX_PRICE_USD` | Per-message maximum sent to AWS; default `0.05`. The application accepts a positive decimal up to `1.00`. This is not a monthly spending cap. |
 | `RESEND_API_KEY` | Used only with `EMAIL_PROVIDER=resend`. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Used only with `SMS_PROVIDER=twilio`. |
-| `TWILIO_VERIFY_SERVICE_SID` | Twilio Verify service used for live phone ownership checks. |
+| `TWILIO_VERIFY_SERVICE_SID` | Twilio Verify service used for phone ownership checks and password recovery. |
 | `TWILIO_MESSAGING_SERVICE_SID` | Twilio Messaging Service used for order-update SMS. |
 | `PRIVACY_CONTACT`, `SUPPORT_EMAIL` | Real operator contacts displayed in privacy/support flows. |
 | `RUN_BACKGROUND_JOBS` | Keep false in the web process when running the separate worker. |
@@ -77,7 +79,7 @@ The order page offers **Download PDF receipt** from the authenticated `/api/orde
 2. Choose SES **à la carte** sending for this small application. Dedicated IPs, paid deliverability plans and other optional add-ons are not required by the implementation. Check the provider's current charges, outbound data and any optional features in the selected region.
 3. Request SES production access for that region when sending to ordinary customer addresses. In the sandbox, recipients must also be verified or use the SES mailbox simulator. A configured application does not remove sandbox restrictions.
 4. Set `EMAIL_PROVIDER=ses`, `AWS_REGION` and `EMAIL_FROM`. Give the runtime access through an appropriately scoped IAM role/default AWS credential chain. On AWS, prefer a workload role; local development may use an authenticated local profile. This repository does not embed AWS credentials or create IAM policies/accounts.
-5. After activation, use a consenting test recipient to check code receipt, expiry and sign-in. Enable `TRANSACTIONAL_EMAIL_ENABLED` in controlled staging to check a test order update before enabling order email in production. Configure provider-side bounce/complaint monitoring and handle suppressed addresses.
+5. After activation, use a consenting test recipient to check signup and password-reset code receipt, expiry and single use, followed by explicit password sign-in. Enable `TRANSACTIONAL_EMAIL_ENABLED` in controlled staging to check a test order update before enabling order email in production. Configure provider-side bounce/complaint monitoring and handle suppressed addresses.
 
 The SESv2 client uses one send attempt per request. An ambiguous network/server failure is not retried automatically because SES SendEmail has no application idempotency token. See the delivery-state table below.
 
@@ -111,19 +113,25 @@ References: [India sender registration](https://docs.aws.amazon.com/sms-voice/la
 
 For Resend, select `EMAIL_PROVIDER=resend`, verify the sender/domain, and provide `RESEND_API_KEY` plus `EMAIL_FROM`. Each order email uses a stable idempotency key. Application retries stop within 23 hours, inside Resend's documented 24-hour deduplication window. Changing the destination or selected provider cancels a queued retry.
 
-For Twilio, select `SMS_PROVIDER=twilio` and provide the account credentials. Phone sign-in uses the configured **Twilio Verify** service and checks the exact verification SID; an SMS send response never proves ownership. Order updates use the separate Messaging Service. Complete destination-country sender/template requirements and account restrictions in Twilio before activation. Ambiguous SMS acceptance is not automatically retried.
+For Twilio, select `SMS_PROVIDER=twilio` and provide the account credentials. Phone ownership checks and password recovery use the configured **Twilio Verify** service and check the exact verification SID; an SMS send response never proves ownership. Order updates use the separate Messaging Service. Complete destination-country sender/template requirements and account restrictions in Twilio before activation. Ambiguous SMS acceptance is not automatically retried.
 
 References: [Resend send API](https://resend.com/docs/api-reference/emails/send-email), [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys), [Twilio Verify checks](https://www.twilio.com/docs/verify/api/verification-check) and [Twilio Messaging Service sends](https://www.twilio.com/docs/messaging/api/message-resource).
 
 ## Contact ownership and privacy
 
-Customers can add or verify email and phone contacts from `/privacy`. Verification is bound to the signed-in account when linking a contact; an address or number belonging to another account is not merged. Customer code sign-in cannot access staff accounts. Email-code sign-in also provides password-independent account recovery.
+Non-demo signup verifies email before creating the account and password. Signup can also capture a normalized, unique Indian mobile number; this enables mobile-number/password login but leaves `phoneVerifiedAt` unset. A signup or checkout phone number is not proof of phone ownership. Customers can verify their phone from `/privacy` after signing in, when an SMS provider is configured. Verification is bound to that signed-in account; an address or number belonging to another account is not merged.
 
-The first real verification of an unverified email account clears untrusted password/session access. An account that already has a live verified phone must first sign in through that phone before linking an unverified email; an unauthenticated email claimant cannot replace its owner.
+New sessions expire **15 days after creation**, with the same expiry in the HttpOnly cookie and database record. Expired sessions are rejected on the server. Sessions issued before this change retain their stored expiry. Logout, account deletion and password reset revoke sessions before their scheduled expiry.
+
+Forgot password accepts an email address or mobile number and selects that contact's configured channel. `POST /api/auth/password/request` returns a generic challenge response for existing, unknown and unverified contacts; it sends only to a contact that was already verified on the account. Delivery runs after the HTTP response so provider latency does not reveal account existence. An unconfigured channel returns the same explicit unavailable response for all identifiers of that type, and no simulated delivery is claimed.
+
+`POST /api/auth/password/verify` requires the challenge ID, six-digit code and new password. Reset codes are hashed at rest, expire after five minutes, allow at most five guesses and are consumed once. Requests and guesses are rate limited. Resend invalidates the previous challenge; a changed contact, password, account role or deleted account invalidates pending recovery. Success changes the password, revokes all sessions and returns the user to explicit password login. It does not create a session. Staff recovery requires a preverified contact and preserves the staff role; it cannot promote a customer.
+
+The old email/phone code-login endpoints reject ordinary sign-in requests. They remain available only for authenticated customer contact verification; signup uses its separate registration-verification endpoint. First-time verification of a legacy unverified email may invalidate its untrusted password/sessions, after which verified-email password recovery establishes a new password.
 
 Live notifications use verified **account** contacts established before the message was created. A phone number typed into a delivery checkout is not proof of ownership and does not become an SMS destination. Marketing opt-in remains optional; essential order updates are separate from marketing. Verification after an update does not retroactively send that old update.
 
-Account erasure deletes message/outbox records, pending contact challenges and active sessions. Delivery processing locks the customer record so erasure cannot complete while a provider send is in progress. A provider may already have accepted a message before erasure; application deletion cannot retract a sent email/SMS. Account export omits OTP hashes, session tokens, provider credentials and payment retry secrets.
+Account erasure deletes message/outbox records, pending contact/reset challenges and active sessions. Delivery processing locks the customer record so erasure cannot complete while a provider send is in progress. A provider may already have accepted a message before erasure; application deletion cannot retract a sent email/SMS. Account export omits OTP hashes, session tokens, provider credentials and payment retry secrets.
 
 ## Worker operations and delivery states
 

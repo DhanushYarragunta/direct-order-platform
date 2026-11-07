@@ -1,30 +1,53 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ChefHat, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, ChefHat, Eye, EyeOff, ShieldCheck, UserRound } from "lucide-react";
 import { request } from "@/lib/client";
 import { useApp } from "./provider";
 import { ErrorNotice } from "./ui";
 import Link from "next/link";
-import { PhoneSignIn } from "./phone-sign-in";
-import { CodeSignIn, type CommunicationMethods } from "./code-sign-in";
 import { EmailRegistration } from "./email-registration";
 import "./privacy.css";
+import "./auth.css";
+
+type AuthView = "login" | "register" | "forgot";
+type RecoveryMethods = { passwordResetEmail: boolean; passwordResetPhone: boolean };
+type ResetChallenge = { challengeId: string; expiresAt: string; delivery: "email" | "sms" };
+
+function PasswordField({ label, name = "password", fresh = false }: { label: string; name?: string; fresh?: boolean }) {
+  const [visible, setVisible] = useState(false);
+  return <div className="auth-password-field">
+    <label htmlFor={`auth-${name}`}>{label}</label>
+    <div className="auth-password-control">
+      <input id={`auth-${name}`} name={name} type={visible ? "text" : "password"} autoComplete={fresh ? "new-password" : "current-password"}
+        minLength={fresh ? 10 : 1} maxLength={128} required placeholder={fresh ? "At least 10 characters" : "Enter your password"} />
+      <button type="button" className="auth-password-toggle" aria-label={visible ? "Hide password" : "Show password"} aria-pressed={visible}
+        onClick={() => setVisible(value => !value)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+    </div>
+  </div>;
+}
 
 export function AuthScreen() {
   const app = useApp(),
     router = useRouter(),
-    [register, setRegister] = useState(false),
-    [phoneSignIn, setPhoneSignIn] = useState(false),
-    [emailCodeSignIn, setEmailCodeSignIn] = useState(false),
-    [methods, setMethods] = useState<CommunicationMethods | null>(null),
+    [view, setView] = useState<AuthView>("login"),
+    [identifier, setIdentifier] = useState(""),
+    [challenge, setChallenge] = useState<ResetChallenge | null>(null),
+    [methods, setMethods] = useState<RecoveryMethods | null>(null),
+    [message, setMessage] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   useEffect(() => {
     let active = true;
-    void request<CommunicationMethods>("/api/auth/methods").then(value => { if (active) { setMethods(value); if (value.emailCode && !value.demoMode) setEmailCodeSignIn(true); } }).catch(() => {});
+    void request<RecoveryMethods>("/api/auth/methods").then(value => { if (active) setMethods(value); }).catch(() => {});
     return () => { active = false; };
   }, []);
+  const register = view === "register", forgot = view === "forgot";
+  const recoveryUnavailable = methods && ((!methods.passwordResetEmail && !methods.passwordResetPhone)
+    || (identifier.includes("@") ? methods.passwordResetEmail === false : /^[+\d\s()-]+$/.test(identifier) ? methods.passwordResetPhone === false : false));
+  function navigate(next: AuthView) {
+    setView(next); setChallenge(null); setError(""); setMessage("");
+  }
   async function complete(role: string) {
     await app.refreshUser();
     const next = new URLSearchParams(location.search).get("next");
@@ -45,6 +68,7 @@ export function AuthScreen() {
   }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError("");
     const form = new FormData(event.currentTarget);
@@ -52,17 +76,13 @@ export function AuthScreen() {
       const result = await request<{ role: string }>(
         `/api/auth/${register ? "register" : "login"}`,
         "POST",
-        {
-          email: form.get("email"),
-          password: form.get("password"),
-          ...(register
-            ? {
+        register ? {
+                email: form.get("email"), password: form.get("password"),
+                ...(String(form.get("phone") || "").trim() ? { phone: String(form.get("phone")).trim() } : {}),
                 name: form.get("name"),
                 consent: form.get("consent") === "on",
                 marketingOptIn: form.get("marketing") === "on",
-              }
-            : {}),
-        },
+              } : { identifier: identifier.trim(), password: form.get("password") },
       );
       await complete(result.role);
     } catch (e) {
@@ -70,6 +90,23 @@ export function AuthScreen() {
     } finally {
       setBusy(false);
     }
+  }
+  async function resetPassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    const form = new FormData(event.currentTarget);
+    setBusy(true); setError("");
+    try {
+      if (!challenge) {
+        setChallenge(await request<ResetChallenge>("/api/auth/password/request", "POST", { identifier: identifier.trim() }));
+      } else {
+        await request("/api/auth/password/verify", "POST", { challengeId: challenge.challengeId, code: form.get("code"), password: form.get("password") });
+        await app.refreshUser();
+        setChallenge(null); setView("login");
+        setMessage("Password updated. Sign in with your new password.");
+      }
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
   }
   async function demo(account: string) {
     setBusy(true);
@@ -106,18 +143,31 @@ export function AuthScreen() {
       </div>
       <section className="auth-card">
         <p className="eyebrow">DECCAN KITCHEN & CO.</p>
-        <h2>{register ? "Make yourself at home." : "Welcome back."}</h2>
+        <h2>{register ? "Make yourself at home." : forgot ? challenge ? "Choose a new password." : "Forgot your password?" : "Welcome back."}</h2>
         <p className="muted">
           {register
             ? "Create your account to order directly."
-            : "Sign in for good food, without the fuss."}
+            : forgot ? "Get a verification code by email or SMS to reset your password." : "Sign in with your email or mobile number and password."}
         </p>
-        {(!register || app.demoMode) && (app.demoMode || methods?.phoneCode || methods?.emailCode) && <div className="auth-methods" aria-label="Sign-in method">
-          {(app.demoMode || methods?.emailCode) && <button type="button" className={`button ${emailCodeSignIn ? "primary" : ""}`} aria-pressed={emailCodeSignIn} onClick={() => { setEmailCodeSignIn(true); setPhoneSignIn(false); }}>Email code{app.demoMode ? " · demo" : ""}</button>}
-          <button type="button" className={`button ${!phoneSignIn && !emailCodeSignIn ? "primary" : ""}`} aria-pressed={!phoneSignIn && !emailCodeSignIn} onClick={() => { setPhoneSignIn(false); setEmailCodeSignIn(false); }}>Password</button>
-          {(app.demoMode || methods?.phoneCode) && <button type="button" className={`button ${phoneSignIn ? "primary" : ""}`} aria-pressed={phoneSignIn} onClick={() => { setPhoneSignIn(true); setEmailCodeSignIn(false); }}>Phone code{app.demoMode ? " · demo" : ""}</button>}
-        </div>}
-        {register && !app.demoMode ? <EmailRegistration complete={complete} /> : phoneSignIn ? <PhoneSignIn complete={complete} /> : emailCodeSignIn ? <CodeSignIn channel="email" demoMode={app.demoMode} complete={complete} /> : <form onSubmit={submit} className="form-stack">
+        {message && <p className="privacy-success auth-notice" role="status">{message}</p>}
+        {forgot ? <form key={challenge ? "reset-verify" : "reset-request"} className="form-stack" onSubmit={resetPassword} aria-busy={busy}>
+          {!challenge ? <>
+            <label>Email or mobile number<input name="identifier" autoComplete="username" required maxLength={150} value={identifier}
+              onChange={event => setIdentifier(event.target.value)} placeholder="you@example.com or 9876543210" autoFocus /></label>
+            <p className="auth-help">Use a contact already verified on your account. An email address receives an email; a mobile number receives an SMS.</p>
+            {methods?.passwordResetEmail === false && methods?.passwordResetPhone === false
+              ? <p className="auth-help">Password recovery is temporarily unavailable. <Link href="/help">Contact support</Link> for help.</p>
+              : methods?.passwordResetPhone === false ? <p className="auth-help">SMS recovery is not available yet. Use your verified email address.</p>
+              : methods?.passwordResetEmail === false ? <p className="auth-help">Email recovery is not available yet. Use your verified mobile number.</p> : null}
+          </> : <>
+            <p className="auth-help" role="status">If a matching verified account exists, a code was sent {challenge.delivery === "sms" ? "by SMS" : "to your email"}. {challenge.delivery === "email" && "Check your inbox and spam folder. "}Codes expire in five minutes.</p>
+            <label>Six-digit code<input name="code" autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" minLength={6} maxLength={6} required autoFocus /></label>
+            <PasswordField label="New password" fresh />
+            <button className="text-button auth-retry" type="button" disabled={busy} onClick={() => { setChallenge(null); setError(""); }}>Use another contact or request a new code</button>
+          </>}
+          {error && <ErrorNotice message={error} />}
+          <button className="button primary full" disabled={busy || (!challenge && Boolean(recoveryUnavailable))}>{busy ? "Please wait…" : challenge ? "Reset password" : "Send reset code"}<ArrowRight size={18} /></button>
+        </form> : register && !app.demoMode ? <EmailRegistration complete={complete} /> : <form key={register ? "register" : "login"} onSubmit={submit} className="form-stack" aria-busy={busy}>
           {register && (
             <label>
               Your name
@@ -131,7 +181,7 @@ export function AuthScreen() {
               />
             </label>
           )}
-          <label>
+          {register ? <label>
             Email address
             <input
               type="email"
@@ -141,21 +191,11 @@ export function AuthScreen() {
               maxLength={150}
               placeholder="you@example.com"
             />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              name="password"
-              autoComplete={register ? "new-password" : "current-password"}
-              minLength={register ? 10 : 1}
-              maxLength={128}
-              required
-              placeholder={
-                register ? "At least 10 characters" : "Your password"
-              }
-            />
-          </label>
+          </label> : <label>Email or mobile number<input name="identifier" autoComplete="username" required maxLength={150} value={identifier}
+            onChange={event => setIdentifier(event.target.value)} placeholder="you@example.com or 9876543210" /></label>}
+          {register && <label>Mobile number (optional)<input name="phone" type="tel" autoComplete="tel-national" maxLength={20} placeholder="9876543210" /></label>}
+          <PasswordField label="Password" fresh={register} />
+          {!register && <button type="button" className="text-button auth-forgot" disabled={busy} onClick={() => navigate("forgot")}>Forgot password?</button>}
           {register && (
             <>
               <label className="check-label">
@@ -178,20 +218,16 @@ export function AuthScreen() {
           </button>
         </form>}
         <p className="auth-switch">
-          {register ? "Already have an account?" : "New to our kitchen?"}{" "}
+          {register ? "Already have an account?" : forgot ? "Remember your password?" : "New to our kitchen?"}{" "}
           <button
             className="text-button"
-            onClick={() => {
-              setRegister(!register);
-              setPhoneSignIn(false);
-              setEmailCodeSignIn(false);
-              setError("");
-            }}
+            disabled={busy}
+            onClick={() => navigate(register || forgot ? "login" : "register")}
           >
-            {register ? "Sign in" : "Create an account"}
+            {register || forgot ? "Sign in" : "Create an account"}
           </button>
         </p>
-        {app.demoMode && (
+        {app.demoMode && !forgot && (
           <div className="demo-accounts">
             <span className="divider-label">EXPLORE THE DEMO</span>
             <div className="demo-account-grid">

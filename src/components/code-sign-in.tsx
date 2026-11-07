@@ -30,7 +30,7 @@ export function CodeSignIn({ channel, demoMode, complete, purpose = "sign_in", n
   }
   return <form key={challenge ? "verification" : "details"} className="form-stack phone-sign-in" onSubmit={submit} aria-busy={busy}>
     {demoMode ? <p className="privacy-callout">Demo {channel} verification shows a code here. It does not send a message or verify ownership for live order updates.</p>
-      : <p>{linking ? "Verify this contact to receive order updates and sign in with a code." : channel === "email" ? "Use an email code to sign in or recover access without your password. First-time verification secures the account for email-code sign-in." : "Receive a sign-in code by SMS."}</p>}
+      : <p>{linking ? "Verify this contact to receive order updates and recover your password." : channel === "email" ? "Verify ownership of your email address with a one-time code." : "Verify ownership of your mobile number with an SMS code."}</p>}
     {!challenge ? <>
       <label>Your name<input name="name" autoComplete="name" minLength={2} maxLength={70} required defaultValue={name} /></label>
       {channel === "phone" ? <label>Mobile number<input name="phone" type="tel" autoComplete="tel-national" inputMode="numeric" pattern="[6-9][0-9]{9}" maxLength={10} required defaultValue={value} /></label>

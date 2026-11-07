@@ -9,7 +9,7 @@ type RegistrationChallenge = { challengeId: string; verificationRequired: true; 
 
 export function EmailRegistration({ complete }: Props) {
   const [challenge, setChallenge] = useState<RegistrationChallenge | null>(null);
-  const [details, setDetails] = useState({ name: "", email: "", consent: false, marketingOptIn: false });
+  const [details, setDetails] = useState({ name: "", email: "", phone: "", consent: false, marketingOptIn: false });
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -18,9 +18,11 @@ export function EmailRegistration({ complete }: Props) {
     try {
       if (!challenge) {
         const input = { name: String(form.get("name") || ""), email: String(form.get("email") || ""),
+          phone: String(form.get("phone") || "").trim(),
           consent: form.get("consent") === "on", marketingOptIn: form.get("marketing") === "on" };
         setDetails(input);
-        setChallenge(await request<RegistrationChallenge>("/api/auth/register", "POST", input));
+        const { phone, ...profile } = input;
+        setChallenge(await request<RegistrationChallenge>("/api/auth/register", "POST", { ...profile, ...(phone ? { phone } : {}) }));
       } else {
         const result = await request<{ role: string }>("/api/auth/register/verify", "POST", {
           challengeId: challenge.challengeId, code: form.get("code"), password: form.get("password"),
@@ -37,6 +39,8 @@ export function EmailRegistration({ complete }: Props) {
       <p>First, verify your email. We’ll send a code before creating your account.</p>
       <label>Your name<input name="name" autoComplete="name" minLength={2} maxLength={70} required defaultValue={details.name} /></label>
       <label>Email address<input name="email" type="email" autoComplete="email" maxLength={150} required defaultValue={details.email} /></label>
+      <label>Mobile number (optional)<input name="phone" type="tel" autoComplete="tel-national" maxLength={20} defaultValue={details.phone} placeholder="9876543210" aria-describedby="registration-phone-help" /></label>
+      <small id="registration-phone-help" className="auth-field-help">Use this number with your password to sign in. Verify it in account settings before using SMS password recovery.</small>
       <label className="check-label"><input name="consent" type="checkbox" required defaultChecked={details.consent} /><span>I agree to using my details to fulfil orders and send order updates, as explained in the <Link href="/privacy">privacy notice</Link>.</span></label>
       <label className="check-label"><input name="marketing" type="checkbox" defaultChecked={details.marketingOptIn} /><span>Send me offers and kitchen news. Optional.</span></label>
     </> : <>

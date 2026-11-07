@@ -140,16 +140,20 @@ export function FoodPhoto({
   src,
   name,
   className = "",
+  loading = "eager",
 }: {
   src: string | null;
   name: string;
   className?: string;
+  loading?: "eager" | "lazy";
 }) {
   return src ? (
     <img
       className={`food-photo ${className} ${src.includes("salan") ? "photo-contain" : ""}`}
       src={src}
       alt={name}
+      loading={loading}
+      decoding="async"
       style={{
         objectPosition: src.includes("chicken")
           ? "50% 62%"

@@ -61,22 +61,35 @@ export const quoteSchema = z.object({
   longitude: z.number().min(-180).max(180).optional(),
   localityId,
 }).strict();
-export const loginSchema = z
-  .object({
-    email: z
-      .string()
-      .email()
-      .max(150)
-      .transform((v) => v.toLowerCase().trim()),
-    password: z.string().min(1).max(128),
-  })
-  .strict();
-export const registerSchema = loginSchema.extend({
+const emailAddress = z.string().trim().toLowerCase().email().max(150);
+export const phoneIdentifierSchema = z.string().trim().max(30).transform((value) => {
+  let phone = value.replace(/[\s().-]/g, "");
+  if (phone.startsWith("+91")) phone = phone.slice(3);
+  else if (phone.length === 12 && phone.startsWith("91")) phone = phone.slice(2);
+  return phone;
+}).pipe(z.string().regex(/^[6-9]\d{9}$/, "Enter a valid Indian mobile number"));
+export const optionalPhoneSchema = z.union([z.literal(""), phoneIdentifierSchema]).optional().transform(value => value || undefined);
+export const loginIdentifierSchema = z.string().trim().max(150).transform((value, context) => {
+  const result = value.includes("@") ? emailAddress.safeParse(value) : phoneIdentifierSchema.safeParse(value);
+  if (!result.success) {
+    context.addIssue({ code: "custom", message: "Enter a valid email address or Indian mobile number" });
+    return z.NEVER;
+  }
+  return result.data;
+});
+export const loginSchema = z.union([
+  z.object({ identifier: loginIdentifierSchema, password: z.string().min(1).max(128) }).strict(),
+  z.object({ email: emailAddress, password: z.string().min(1).max(128) }).strict()
+    .transform(({ email, password }) => ({ identifier: email, password })),
+]);
+export const registerSchema = z.object({
+  email: emailAddress,
   name: z.string().trim().min(2).max(70),
+  phone: optionalPhoneSchema,
   password: z.string().min(10).max(128),
   consent: z.literal(true),
   marketingOptIn: z.boolean().default(false),
-});
+}).strict();
 export const paymentSchema = z
   .object({
     attemptKey: z.string().uuid(),

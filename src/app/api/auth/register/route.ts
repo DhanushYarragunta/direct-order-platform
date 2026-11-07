@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       data: {
         name: input.name,
         email: input.email,
+        phone: input.phone,
         passwordHash: hashPassword(input.password),
         role: "CUSTOMER",
         consentAt: new Date(),

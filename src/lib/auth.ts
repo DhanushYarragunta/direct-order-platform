@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 import { db } from "./db";
 
 export const COOKIE = "company_a_session";
+export const SESSION_DURATION_MS = 15 * 86400_000;
 export const tokenHash = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 export async function currentUser() {
@@ -13,7 +14,7 @@ export async function currentUser() {
     where: { id: tokenHash(token) },
     include: { user: { include: { outlet: true } } },
   });
-  if (!session || session.expiresAt < new Date() || session.user.deletedAt) return null;
+  if (!session || session.expiresAt <= new Date() || session.user.deletedAt) return null;
   const { passwordHash: _, ...user } = session.user;
   return user;
 }
@@ -40,7 +41,7 @@ export function staffOutlet(user: AuthUser, requested: string) {
 }
 export async function createSession(userId: string, expectedPasswordHash: string) {
   const token = randomBytes(32).toString("hex"),
-    expiresAt = new Date(Date.now() + 7 * 86400_000);
+    expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
   await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id"=${userId} FOR UPDATE`;
     const user = await tx.user.findUnique({ where: { id: userId }, select: { deletedAt: true, passwordHash: true } });

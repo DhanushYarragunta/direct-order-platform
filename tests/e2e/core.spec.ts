@@ -19,7 +19,7 @@ async function screenshot(page: Page, name: string) {
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
   await page.screenshot({
     path: `.local/screenshots/${name}.png`,
-    fullPage: true,
+    fullPage: !name.startsWith("menu-"),
     animations: "disabled",
   });
 }
@@ -29,26 +29,29 @@ test("responsive real-photo menu and working filters", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Chicken dum biryani", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".dish-card")).toHaveCount(7);
-  expect(
-    await page
-      .locator(".dish-image img")
-      .evaluateAll((images) =>
-        images.every(
-          (i) =>
-            (i as HTMLImageElement).complete &&
-            (i as HTMLImageElement).naturalWidth > 0,
-        ),
-      ),
-  ).toBeTruthy();
+  await expect(page.locator(".dish-card")).toHaveCount(60);
+  // Dish photos load as cards enter the viewport. The catalog unit test
+  // verifies every local asset; exercise the images a customer sees here.
+  for (const photo of [page.locator(".hero-image img"), page.locator(".dish-image img").first()]) {
+    await photo.scrollIntoViewIfNeeded();
+    await expect(photo).toBeVisible();
+    await expect.poll(() => photo.evaluate(image =>
+      (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0,
+    )).toBe(true);
+  }
   await screenshot(page, "menu-desktop");
   await page.getByLabel("Veg only").check();
-  await expect(page.locator(".dish-card")).toHaveCount(5);
-  await page.getByLabel("Search dishes").fill("salan");
+  await expect(page.locator(".dish-card")).toHaveCount(40);
+  await page.getByLabel("Search dishes").fill("mirchi ka salan");
   await expect(page.locator(".dish-card")).toHaveCount(1);
   await page.getByLabel("Search dishes").fill("nothingmatches");
   await expect(page.getByText("No dishes found")).toBeVisible();
   await page.getByRole("button", { name: "Show all dishes" }).click();
+  for (const [category, count] of [["Biryani", 8], ["Starters", 8], ["Kebabs", 6], ["Curries", 8], ["Breads", 5], ["Rice & Meals", 5], ["Sides", 5], ["Sweets", 7], ["Drinks", 8]] as const) {
+    await page.getByRole("button", { name: category, exact: true }).click();
+    await expect(page.locator(".dish-card")).toHaveCount(count);
+  }
+  await page.getByRole("button", { name: "All dishes", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await screenshot(page, "menu-mobile");
   expect(
@@ -133,7 +136,7 @@ test("menu CMS and outlet stock changes reach the customer menu", async ({
   await expect(
     manager.getByRole("heading", { name: "A menu worth coming back for." }),
   ).toBeVisible();
-  await expect(manager.locator(".admin-dish")).toHaveCount(7);
+  await expect(manager.locator(".admin-dish")).toHaveCount(60);
   await screenshot(manager, "menu-manager");
   await manager
     .getByRole("button", { name: "Edit Chicken dum biryani" })

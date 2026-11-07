@@ -1,0 +1,14 @@
+.auth-password-field { display: grid; gap: 8px; }
+.auth-password-field > label { color: #616b55; font-size: 12px; font-weight: 500; }
+.auth-password-control { position: relative; }
+.auth-password-control input { width: 100%; padding-right: 48px; }
+.auth-password-toggle { position: absolute; inset: 0 0 0 auto; width: 44px; border: 0; border-radius: 0 8px 8px 0; background: transparent; color: #4f654c; display: grid; place-items: center; cursor: pointer; }
+.auth-password-toggle:hover { background: #edf2e7; }
+.auth-password-toggle:focus-visible { outline: 2px solid #35653b; outline-offset: -3px; }
+.auth-forgot { justify-self: end; margin-top: -7px; }
+.auth-retry { justify-self: start; text-align: left; }
+.auth-card .auth-help { font-size: 13px; line-height: 1.65; color: #64705c; margin: 0; }
+.auth-help a { color: #185a3c; text-decoration: underline; }
+.auth-notice { margin-top: 20px; font-size: 13px; line-height: 1.6; }
+.auth-card .form-stack label > small { font-size: 12px; line-height: 1.5; }
+.auth-field-help { font-size: 12px; line-height: 1.5; color: #64705c; margin-top: -10px; }

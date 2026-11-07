@@ -1,12 +1,22 @@
 # Release readiness — 8 November 2026
 
-## Verified application
+## Earlier verified release
 
 The release passes 152 unit tests, 87 isolated database tests, 28 core browser scenarios, one hosted-checkout browser fixture and two non-demo registration browser scenarios. TypeScript, the production build and the Linux ARM64 Docker build pass. Provider fixtures do not send messages or move money. The six migrations are applied locally.
 
 The latest fixes prevent immediate webhook retries in non-UTC database sessions, show failed/blocked webhook updates to administrators, preserve refund failure details until every affected payment is reconciled, and remount signup/code-login inputs when switching steps so password or OTP text cannot become a contact field.
 
 GitHub Actions also passed for release commit `d4a0bdd55bc983f3e3d9f9e624eab9114814d75d`: [run 42403715322](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42403715322), job `128496801624`, completed **8 November 2026 at 00:33:07 IST**. TypeScript/tests/build, isolated database and core browser checks, hosted-checkout fixtures, non-demo registration fixtures and the deployment-image build all succeeded.
+
+The subsequent deployed commit `36f2e349320957bf084aba0be7a32d2832dcd415` also passed [GitHub Actions run 42405330915](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42405330915) at **00:52:12 IST on 8 November**: 158 unit tests, 89 database tests, 28 core browser scenarios, one gateway scenario, two registration scenarios, TypeScript, production build and Docker image build. These counts describe that completed checkpoint, not the pending changes below.
+
+## Menu and authentication revision
+
+The owner has requested a **60-item demonstration menu** and password-based sign-in using either email or mobile number. The local revision includes that catalogue expansion, optional normalized signup phone numbers, email/SMS password recovery and **15-day new sessions**. Signup still verifies email before creating an account; an optional signup phone is not treated as verified until a separate authenticated SMS check. Ordinary email/phone OTP sign-in is disabled. Forgot password requires a code sent to a preverified account contact, then a new password; success revokes all sessions and requires explicit password login.
+
+The revision passed **162 unit tests and 107 isolated database tests**, TypeScript and the production build. All **33 browser scenarios** passed: 28 core, one hosted checkout and four non-demo signup/recovery cases. They cover all category filters, phone/password login, persistent cookies, reset delivery, replay rejection and session revocation. The seventh password-recovery migration and hosted catalogue import must complete during deployment verification; earlier CI results describe only their named commits.
+
+The owner clarified that this is a demonstration project and has no existing SMS sender/provider setup. Read-only AWS inspection found `ap-south-1` SMS account tier **SANDBOX**, with **no registrations and no sender IDs**. SMS recovery is implemented and tested with mocked AWS/Twilio transports; real SMS is unavailable and no SMS enablement was applied. The new interface reports SMS recovery unavailable and offers verified-email recovery. Password-reset codes are never displayed or faked. SES remains sandboxed with its existing verified-recipient restriction, and the public Render database remains in non-demo authentication mode.
 
 ## Initial Render inspection — before the update
 
@@ -53,11 +63,12 @@ The owner approved this test-mode setup on 8 November 2026. The update reused th
 | `TRANSACTIONAL_SMS_ENABLED` | `false` |
 | `RUN_BACKGROUND_JOBS` | `true`, because this existing service has no separate worker; jobs stop while Free hosting sleeps |
 
-The approved catalogue initialization is complete. Administrator identity/setup and any further business-data changes require separate approval. Do not run the demo seed or invent licence verification. Continue with hosted signup and order-flow acceptance using the initialized catalogue.
+The original seven-item catalogue initialization is complete. The requested 60-item expansion and authentication revision are tracked separately above and have not yet been imported/deployed. Administrator identity/setup remains a separate approval step. Do not run the demo seed or invent licence verification. Continue with hosted signup and order-flow acceptance after the pending revision is verified and deployed.
 
 ## Remaining provider checks
 
 - The existing Razorpay test transaction captured ₹320. Provider reads confirm ₹0 refunded and no refund records. Both documented refund request paths returned HTTP 400; the exact provider-side cause is unconfirmed. Keep the full refund pending and review balance/payment eligibility in the merchant dashboard.
 - The SES sender is verified, feedback forwarding is enabled, and the account suppresses bounces/complaints. A prior test email arrived in Spam. Production access is still disabled; a sender domain and inbox-placement checks remain necessary for a dependable launch.
+- The SMS account is sandboxed with no registrations or sender IDs. The application path is implemented and mock-tested, but no actual SMS code or update has been sent by this revision and no provider setup was enabled.
 - Configure the matching test webhook at `/api/payments/razorpay/webhook` and verify provider-triggered recovery against the updated host. The deployment has succeeded, but public provider delivery has not yet been confirmed; local signed webhook tests do not prove it.
 - Live merchant activation, live keys, sender approval, persistent worker hosting and operational recovery checks are required before accepting real customer orders. SMS additionally requires the applicable sender/template registration.

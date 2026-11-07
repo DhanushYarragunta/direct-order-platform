@@ -5,23 +5,25 @@ import { db, serializable } from "./db";
 import { hashPassword, verifyPassword } from "./password";
 import { communicationCapabilities, emailProvider, sendEmail } from "./communications";
 import { otpVerifySchema } from "./phone-otp";
+import { optionalPhoneSchema } from "./validation";
 
 export const emailOtpRequestSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(150).refine((value) => !/\.(invalid|example)$/.test(value), "Use an email address that can receive mail"),
   name: z.string().trim().min(2).max(70), consent: z.literal(true), marketingOptIn: z.boolean().default(false),
   purpose: z.enum(["sign_in", "verify_contact"]).default("sign_in"),
 }).strict();
-export const emailRegistrationRequestSchema = emailOtpRequestSchema.omit({ purpose: true });
+export const emailRegistrationRequestSchema = emailOtpRequestSchema.omit({ purpose: true }).extend({ phone: optionalPhoneSchema });
 export const emailRegistrationVerifySchema = otpVerifySchema.extend({ password: z.string().min(10).max(128) }).strict();
 
 export async function requestEmailRegistration(input: z.input<typeof emailRegistrationRequestSchema>) {
-  return requestEmailOtp(input, undefined, true);
+  const parsed = emailRegistrationRequestSchema.parse(input);
+  return requestEmailOtp(parsed, undefined, true, parsed.phone);
 }
 export async function verifyEmailRegistration(input: z.infer<typeof emailRegistrationVerifySchema>) {
   return verifyEmailOtp({ challengeId: input.challengeId, code: input.code }, undefined, { registrationPassword: input.password });
 }
 
-export async function requestEmailOtp(input: z.input<typeof emailOtpRequestSchema>, userId?: string, registration = false) {
+export async function requestEmailOtp(input: z.input<typeof emailOtpRequestSchema>, userId?: string, registration = false, registrationPhone?: string) {
   if (!communicationCapabilities().emailCode) throw new AppError(503, "Email codes are not enabled. Please use password sign-in.");
   const purpose = registration ? "registration" : input.purpose || "sign_in";
   if (purpose === "verify_contact" && !userId) throw new AppError(401, "Please sign in to verify a contact.");
@@ -34,10 +36,13 @@ export async function requestEmailOtp(input: z.input<typeof emailOtpRequestSchem
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`email-otp:${input.email}`}))`;
     if (registration && await tx.user.findUnique({ where: { email: input.email }, select: { id: true } }))
       throw new AppError(409, "This email already has an account. Sign in instead.");
+    if (registrationPhone && await tx.user.findUnique({ where: { phone: registrationPhone }, select: { id: true } }))
+      throw new AppError(409, "This mobile number is already linked to an account. Sign in instead.");
     await tx.emailOtp.deleteMany({ where: { email: input.email } });
     await tx.emailOtp.create({ data: { id, email: input.email, name: input.name, consentAt: now,
       marketingOptIn: input.marketingOptIn, purpose, userId: purpose === "verify_contact" ? userId : null,
       codeHash: hashPassword(`${id}:${input.email}:${code}`), provider: demo ? "demo" : emailProvider(), expiresAt,
+      registrationPhone: registration ? registrationPhone : null,
     } });
   });
   if (!demo) {
@@ -74,6 +79,7 @@ export async function verifyEmailOtp(input: z.infer<typeof otpVerifySchema>, use
       await tx.emailOtp.update({ where: { id: challenge.id }, data: { consumedAt: new Date() } });
       return { user: await tx.user.create({ data: {
         email: challenge.email, name: challenge.name, passwordHash: registrationPasswordHash!,
+        phone: challenge.registrationPhone, phoneVerifiedAt: null,
         emailVerifiedAt: challenge.provider === "demo" ? null : new Date(), role: "CUSTOMER",
         consentAt: challenge.consentAt, marketingOptIn: challenge.marketingOptIn,
       } }) };

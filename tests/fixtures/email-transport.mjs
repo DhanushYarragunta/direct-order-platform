@@ -19,7 +19,7 @@ globalThis.fetch = async (input, init) => {
   if (url.href === "https://api.resend.com/emails") {
     const request = new Request(input, init);
     const message = await request.json();
-    const challengeId = request.headers.get("Idempotency-Key")?.replace(/^otp\//, "");
+    const challengeId = request.headers.get("Idempotency-Key")?.replace(/^(otp|password-reset)\//, "");
     if (request.method !== "POST" || request.headers.get("Authorization") !== "Bearer registration-browser-fixture" ||
         !/^[a-f0-9-]{36}$/.test(challengeId || "") || !Array.isArray(message.to) || message.to.length !== 1 ||
         !/^[^@]+@customer\.test$/.test(message.to[0]))

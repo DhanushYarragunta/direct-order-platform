@@ -56,6 +56,7 @@ model User {
   marketingOptIn Boolean  @default(false)
   createdAt     DateTime  @default(now())
   sessions      Session[]
+  passwordResets PasswordReset[]
   orders        Order[]
   audits        Audit[]
   loyaltyEntries LoyaltyEntry[]
@@ -390,7 +391,29 @@ model EmailOtp {
   provider String @default("demo")
   userId String?
   purpose String @default("sign_in")
+  registrationPhone String?
   @@index([expiresAt])
+}
+
+model PasswordReset {
+  id String @id
+  userId String?
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel String
+  contactHash String
+  credentialVersion String?
+  roleSnapshot String?
+  provider String
+  providerId String?
+  codeHash String
+  attempts Int @default(0)
+  expiresAt DateTime
+  consumedAt DateTime?
+  sentAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+  @@index([contactHash])
+  @@index([userId])
 }
 
 model MessageDelivery {

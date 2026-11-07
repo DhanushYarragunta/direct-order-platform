@@ -2,17 +2,25 @@ import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 const origin = "http://127.0.0.1:3001";
-test("email-code sign-in supports one-time access without a password", async ({ page }) => {
+test("normal sign-in uses a password and offers account recovery separately", async ({ page }) => {
+  const email = `browser-${crypto.randomUUID()}@example.test`, password = "password-browser-secret!";
+  expect((await page.request.post("/api/auth/register", { headers: { origin }, data: {
+    name: "Password browser customer", email, password, consent: true,
+  } })).status()).toBe(201);
+  await page.request.post("/api/auth/logout", { headers: { origin } });
   await page.goto("/login");
-  await page.getByRole("button", { name: "Email code · demo", exact: true }).click();
-  await page.getByLabel("Your name", { exact: true }).fill("Email browser customer");
-  await page.getByLabel("Email address", { exact: true }).fill(`browser-${crypto.randomUUID()}@example.test`);
-  await page.getByRole("checkbox", { name: /I agree to using my details/ }).check();
-  await page.getByRole("button", { name: "Get demo code", exact: true }).click();
-  const code = await page.locator(".phone-sign-in [role=status] strong").textContent();
-  await page.getByLabel("Six-digit code").fill(code!);
-  await page.getByRole("button", { name: "Verify code and sign in", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("button", { name: /^Email code|^Phone code/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Forgot password?", exact: true })).toBeVisible();
+  await page.getByLabel("Email or mobile number", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("incorrect-password");
+  await page.getByRole("button", { name: "Show password", exact: true }).click();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Hide password", exact: true }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.locator(".auth-card").getByRole("alert")).toBeVisible();
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/");
   await page.goto("/privacy");
   await expect(page.getByRole("heading", { name: "Privacy & account", exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });

@@ -145,4 +145,28 @@ describe.sequential("email-verified password registration", () => {
     expect(user.emailVerifiedAt).toBeNull();
     expect(communications.sendEmail).not.toHaveBeenCalled();
   });
+
+  it("normalizes optional signup mobile without claiming SMS ownership", async () => {
+    const mobile = `7${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
+    const input = { ...profile(), phone: `+91 ${mobile.slice(0, 5)} ${mobile.slice(5)}` };
+    const signup = await start(input);
+    expect(await db.user.findUnique({ where: { phone: mobile } })).toBeNull();
+    expect((await verify(signup.challenge.challengeId, signup.code)).status).toBe(201);
+    const user = await db.user.findUniqueOrThrow({ where: { email: input.email } });
+    expect(user.phone).toBe(mobile);
+    expect(user.phoneVerifiedAt).toBeNull();
+    expect(user.emailVerifiedAt).not.toBeNull();
+  });
+
+  it("never replaces an existing mobile binding during signup or while its code is pending", async () => {
+    const mobile = `7${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
+    const input = { ...profile(), phone: mobile };
+    const signup = await start(input);
+    const owner = await db.user.create({ data: { email: profile().email, phone: mobile, phoneVerifiedAt: new Date(), name: "Mobile owner", passwordHash: "preserved" } });
+    expect((await verify(signup.challenge.challengeId, signup.code)).status).toBe(409);
+    expect(await db.user.findUnique({ where: { email: input.email } })).toBeNull();
+    expect((await db.user.findUniqueOrThrow({ where: { phone: mobile } })).id).toBe(owner.id);
+    expect((await register(request("/api/auth/register", { ...profile(), phone: mobile }))).status).toBe(409);
+    expect(cookieJar.set).not.toHaveBeenCalled();
+  });
 });

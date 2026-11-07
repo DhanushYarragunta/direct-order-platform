@@ -49,6 +49,8 @@ export function MenuScreen() {
           .toLowerCase()
           .includes(query.toLowerCase()),
     ) || [];
+  const groups = CATEGORIES.map((name) => ({ name, items: items.filter((item) => item.category === name) }))
+    .filter((group) => group.items.length > 0);
   function customise(item: MenuItem) {
     setSelectedId(item.id);
     setPortion("regular");
@@ -219,12 +221,14 @@ export function MenuScreen() {
           <div className="category-tabs" aria-label="Menu categories">
             {["All dishes", ...CATEGORIES].map((c) => (
               <button
+                aria-label={c}
                 aria-pressed={category === c}
                 className={category === c ? "selected" : ""}
                 key={c}
                 onClick={() => setCategory(c)}
               >
                 {c === "All dishes" && <UtensilsCrossed size={15} />} {c}
+                <span className="category-count" aria-hidden="true">{c === "All dishes" ? data?.items.length || 0 : data?.items.filter(item => item.category === c).length || 0}</span>
               </button>
             ))}
           </div>
@@ -232,14 +236,17 @@ export function MenuScreen() {
           {loading ? (
             <Loading />
           ) : items.length ? (
-            <div className="menu-grid">
-              {items.map((item) => (
+            <div className="menu-groups">
+              {groups.map((group) => <section className="menu-category-section" key={group.name} aria-label={`${group.name} dishes`}>
+                <div className="menu-category-heading"><h3>{group.name}</h3><span>{group.items.length} {group.items.length === 1 ? "dish" : "dishes"}</span></div>
+                <div className="menu-grid">
+              {group.items.map((item) => (
                 <article
                   className={`dish-card ${!item.available ? "sold-out" : ""}`}
                   key={item.id}
                 >
                   <div className="dish-image">
-                    <FoodPhoto src={item.photo} name={item.name} />
+                    <FoodPhoto src={item.photo} name={item.name} loading="lazy" />
                     {item.featured && (
                       <span className="dish-badge">
                         <Flame size={12} /> House favourite
@@ -283,6 +290,8 @@ export function MenuScreen() {
                   </div>
                 </article>
               ))}
+                </div>
+              </section>)}
             </div>
           ) : (
             !error && (
