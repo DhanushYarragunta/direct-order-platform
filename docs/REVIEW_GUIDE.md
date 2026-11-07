@@ -2,7 +2,7 @@
 
 For local/demo review, open http://127.0.0.1:3000 with `DEMO_MODE=true` and use the Customer, Admin, Manager and outlet Kitchen buttons at `/login`. Separate browser profiles keep sessions independent. On the hosted demonstration, use `judge@deccan.example` with the password supplied privately; the local demo shortcuts are disabled.
 
-The AI/mobile revision passed local TypeScript/build, 196 unit tests, 112 integration tests and 38 browser scenarios. CI and deployment remain pending; see RELEASE_READINESS.md.
+The AI/mobile revision passed local TypeScript/build, 196 unit tests, 112 integration tests and 38 browser scenarios. The current revision is live on Render after a browser-test synchronization fix; all 33 core scenarios passed again locally. All 19 checks passed on the current deployment; CI also passed for the exact deployed commit. A live visual review also confirmed `/workspace/ai` and the ten-minute-late preview; see RELEASE_READINESS.md.
 
 ## Suggested review order
 

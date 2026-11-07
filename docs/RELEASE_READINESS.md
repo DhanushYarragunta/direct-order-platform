@@ -1,16 +1,20 @@
 # Release readiness — 8 November 2026
 
-## AI demonstration revision — locally verified, CI/deployment pending
+## Current AI demonstration release — deployed and verified
 
-Implementation now includes a mobile-visible reorder strip, honest checkout/tracking estimate explanations, and an ADMIN/MANAGER AI workspace at `/workspace/ai`. The workspace reads the current queue and previews full/20-example history, busy/unusual loads, kitchen minimums, manager overrides and ten-minute late alerts. Its customer/manager message log is preview-only; scenarios send/save no messages, create no orders and change no operational promises.
+Commit **`82f5cfc02883f8163dcfba791a4e1f4a1293bc0e`** is **Live** in Render deployment **`dep-dbnpes0473hc739u1d2g`**. The dashboard confirmed the exact commit and successful deployment state.
 
-The demo estimator trains on 300 explicitly synthetic records held only in memory, with separate `demo-ridge-prep-v1` / `demo-rules-v1` provenance. It runs in demo mode or the existing explicitly enabled Razorpay public-test configuration. It inserts no fake training orders and cannot contaminate live history; live learning still requires at least 60 qualifying completed records. Synthetic holdout errors are not restaurant accuracy measurements.
+The release adds mobile reorder cards, honest checkout/tracking explanations and the ADMIN/MANAGER AI workspace at `/workspace/ai`. Its 300 explicitly synthetic training examples stay in memory, with separate `demo-ridge-prep-v1` / `demo-rules-v1` provenance; live learning still requires at least 60 qualifying completed orders. Current/busy loads, full/20-example history, unusual-load fallback, minimum-respecting overrides and ten-minute-late alerts can be previewed. Scenario messages are labelled preview-only and are neither sent nor saved. No training orders were inserted, and cloud/provider settings were unchanged.
 
-Local verification on **8 November 2026** passed **196 unit tests, 112 database integration tests and 38 browser scenarios** (33 core, one hosted-checkout fixture and four registration/recovery scenarios), plus TypeScript and the production build. CI and deployment of this AI/mobile revision remain pending. All seven migrations were applied in isolated test databases. The browser suite covers AI scenarios and recovery, access/outlet scope, learned-demo checkout wording and mobile reorder behavior. Provider transport remained intercepted or mocked; scenario previews sent no external messages.
+Local verification passed **196 unit tests, 112 database integration tests and 38 browser scenarios** (33 core, one hosted-checkout fixture and four registration/recovery scenarios), plus TypeScript and the production build. All seven migrations were applied in isolated databases. The 33 core scenarios passed again after the test synchronization correction below; automated provider transport remained intercepted or mocked.
 
-No cloud settings or external messaging configuration were changed for this revision. The verified commit and counts below describe the preceding hosted release.
+All **19 hosted checks passed on this exact commit at 03:00:37 IST on 8 November 2026**. The sanitized `.local/render-ai-verification.json` identifies both `verifiedCommit` and `verifiedRenderDeploy`. Checks cover the synthetic model `demo-ridge-prep-v1:cb836afbf196`, current/busy examples (25/41 minutes), sparse/unusual-load fallbacks, late/override previews, access/origin/schema rejection, 15-day authentication, 60 menu items across three outlets and logout. A live browser review also confirmed the AI workspace and late-message preview; its screenshot is `.local/screenshots/ai-workspace-live.jpg`. Synthetic evaluation errors do not measure restaurant accuracy.
 
-## Current verified release
+[CI run 42415842181](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42415842181), job **`128533625015`**, passed for the exact deployed commit at **03:05:25 IST on 8 November 2026**. Its logs confirm **196 unit tests, 112 database tests and 38 browser scenarios** (33 core + one gateway + four registration/recovery). TypeScript, the production build, Docker image build, artifact upload and cleanup all passed.
+
+The preceding AI commit `33abacad` failed [CI run 42414951751](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42414951751) when hydration replaced a browser-test element. The current commit changes only test synchronization: locator trial-click retries wait through that replacement. Application behavior and cloud settings were unchanged.
+
+## Preceding menu/authentication release
 
 Commit **`de354569c052cfa6eabfc1b86ae87d752171be4f`** deployed successfully in Render deployment **`dep-dbno6jgae00c738vmtl0`**. All **seven migrations** are applied, including `20261108010000_password_recovery`.
 

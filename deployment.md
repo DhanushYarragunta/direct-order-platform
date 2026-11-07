@@ -4,7 +4,7 @@
 
 Project repository: https://github.com/DhanushYarragunta/direct-order-platform
 
-The application has a local review environment and an existing public Render deployment. The AI/mobile revision passed local TypeScript/build, 196 unit tests, 112 integration tests and 38 browser scenarios. Its CI and deployment remain pending. The last verified hosted commit is recorded in `docs/RELEASE_READINESS.md`; local edits do not update that release. Follow `docs/RENDER.md` for upgrades and controlled staging; the root `render.yaml` retains safe public-demo settings. Check the actual GitHub Actions result and the deployed commit for each service instead of assuming local edits are published.
+The application has a local review environment and an existing public Render deployment. The AI/mobile revision passed local TypeScript/build, 196 unit tests, 112 integration tests and 38 browser scenarios. Commit `82f5cfc02883f8163dcfba791a4e1f4a1293bc0e` is live on Render. All 19 hosted checks passed on that commit; CI also passed for the exact deployed commit. Deployment and CI details are recorded in `docs/RELEASE_READINESS.md`. Later local edits do not update that release. Follow `docs/RENDER.md` for upgrades and controlled staging; the root `render.yaml` retains safe public-demo settings. Check the actual GitHub Actions result and the deployed commit for each service instead of assuming local edits are published.
 
 ## Local steps
 
@@ -52,7 +52,7 @@ The synthetic preparation model and `/workspace/ai` use existing configuration: 
 
 The 300 synthetic training examples stay in memory. Scenario evaluation reads the current queue and returns preview-only estimates and messages; it creates no orders, sends/saves no messages and changes no cloud or provider settings. Real estimates retain the separate live-history gate. Actual late notifications depend on a running host/worker and configured delivery providers; free hosting can pause background work while asleep.
 
-The production build and local suites have passed; exact totals are recorded in `docs/RELEASE_READINESS.md`. To reproduce them, run the existing isolated integration/browser suites with port 3001 free. CI and deployment remain pending.
+The production build and local suites have passed; exact totals are recorded in `docs/RELEASE_READINESS.md`. To reproduce them, run the existing isolated integration/browser suites with port 3001 free. The current deployment corrects browser-test synchronization; all 33 core scenarios passed again locally. Its 19 hosted checks passed; CI also passed for the exact deployed commit.
 
 ## Hosting and release verification
 
