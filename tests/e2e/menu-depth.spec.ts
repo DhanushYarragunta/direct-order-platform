@@ -116,7 +116,8 @@ test("mobile reorder suggestions stay available and need an explicit customized 
     await expect(page.locator(".cart-line")).toHaveCount(0);
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
-      await chooseChicken.scrollIntoViewIfNeeded();
+      // Trial clicks retry if account/menu hydration replaces the suggestion.
+      await chooseChicken.click({ trial: true });
       await expect(chooseChicken).toBeInViewport();
       const target = await chooseChicken.boundingBox();
       expect(target!.width).toBeGreaterThanOrEqual(44);
@@ -137,7 +138,7 @@ test("mobile reorder suggestions stay available and need an explicit customized 
 
     await stock(true);
     await page.reload();
-    await chooseChicken.scrollIntoViewIfNeeded();
+    await chooseChicken.click({ trial: true });
     mkdirSync(".local/screenshots", { recursive: true });
     await page.screenshot({ path: ".local/screenshots/mobile-reorder.png", animations: "disabled" });
     await chooseChicken.click();
