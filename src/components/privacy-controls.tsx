@@ -10,7 +10,20 @@ type Preferences = { name: string; email: string; phone: string | null; emailVer
 
 export function PrivacyControls() {
   const app = useApp();
+  const [deletedAccountId, setDeletedAccountId] = useState<string | null>(null);
+  useEffect(() => {
+    if (app.user && app.user.id !== deletedAccountId) setDeletedAccountId(null);
+  }, [app.user?.id, deletedAccountId]);
+  const deletionComplete = Boolean(deletedAccountId && (!app.user || app.user.id === deletedAccountId));
+  // Reset private data and form state immediately when the signed-in account changes.
+  return <AccountPrivacyControls key={app.user?.id || "guest"} deletionComplete={deletionComplete} onDeleted={() => setDeletedAccountId(app.user?.id || null)} />;
+}
+
+function AccountPrivacyControls({ deletionComplete, onDeleted }: { deletionComplete: boolean; onDeleted: () => void }) {
+  const app = useApp();
   const [data, setData] = useState<Preferences | null>(null), [error, setError] = useState("");
+  const [loading, setLoading] = useState(Boolean(app.user)), [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [methods, setMethods] = useState<CommunicationMethods | null>(null);
   useEffect(() => {
@@ -24,12 +37,15 @@ export function PrivacyControls() {
     setMessage(app.demoMode ? "Demo contact saved. Live ownership has not been verified." : "Contact verified. Future order updates can use this contact when delivery is enabled.");
   }
   useEffect(() => {
-    let cancelled = false;
-    if (app.user) void request<Preferences>("/api/account").then((value) => { if (!cancelled) setData(value); })
-      .catch((e) => { if (!cancelled) setError((e as Error).message); });
-    else setData(null);
-    return () => { cancelled = true; };
-  }, [app.user?.id]);
+    if (!app.user) return;
+    const controller = new AbortController();
+    setLoading(true); setLoadError("");
+    void request<Preferences>("/api/account", "GET", undefined, controller.signal)
+      .then((value) => { if (!controller.signal.aborted) setData(value); })
+      .catch((e) => { if (!controller.signal.aborted) setLoadError((e as Error).message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => { controller.abort(); };
+  }, [app.user?.id, loadAttempt]);
   async function marketing(value: boolean) {
     if (!data || busy) return;
     const previous = data.marketingOptIn;
@@ -63,16 +79,19 @@ export function PrivacyControls() {
     setBusy(true); setError(""); setMessage("");
     try {
       await request("/api/account", "DELETE", { confirmation });
-      await app.refreshUser();
-      setData(null); setMessage("Your account has been deleted and all sessions revoked. Contact details were removed from the active database.");
+      setData(null);
+      onDeleted();
+      try { await app.refreshUser(); }
+      catch { setError("Your account was deleted, but the sign-in display could not refresh. Reload this page to update it."); }
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
-  return <section className="privacy-controls" aria-labelledby="privacy-settings-title" aria-busy={busy}>
+  return <section className="privacy-controls" aria-labelledby="privacy-settings-title" aria-busy={busy || loading || !app.authReady}>
     <h2 id="privacy-settings-title">Your privacy settings</h2>
+    {deletionComplete && <p className="privacy-success" role="status">Your account has been deleted and all sessions revoked. Contact details were removed from the active database.</p>}
     {message && <p className="privacy-success" role="status">{message}</p>}
     {error && <ErrorNotice message={error} />}
-    {!app.authReady ? <p>Loading your account…</p> : !app.user ? <p><Link href="/login?next=/privacy">Sign in</Link> to export your data, change marketing consent or delete your customer account.</p> : !data ? <p>Loading preferences…</p> : <>
+    {deletionComplete ? null : !app.authReady ? <p>Loading your account…</p> : !app.user ? <p><Link href="/login?next=/privacy">Sign in</Link> to export your data, change marketing consent or delete your customer account.</p> : loading ? <p role="status">Loading preferences…</p> : loadError ? <ErrorNotice message={loadError} retry={() => setLoadAttempt((attempt) => attempt + 1)} /> : data && <>
       <p>Signed in as <strong>{data.name}</strong>{data.phone ? ` · ${data.phone}` : ` · ${data.email}`}.</p>
       <label className="check-label"><input type="checkbox" checked={data.marketingOptIn} disabled={busy} onChange={(e) => void marketing(e.target.checked)} /><span>Send me offers and kitchen news. Optional; switch off to withdraw consent immediately.</span></label>
       <p>Order confirmations and preparation updates are needed to fulfil your orders and are separate from marketing.</p>

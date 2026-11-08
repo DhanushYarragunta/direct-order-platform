@@ -1,5 +1,13 @@
 # Release readiness — 8 November 2026
 
+## Account access fixes — locally verified, deployment pending
+
+The current changes add an accessible account dialog with sign-out on phones and tablets, recoverable sign-out errors, retryable privacy preferences and accurate deletion confirmation even if the follow-up account refresh fails. Deterministic email-provider rejections now direct users to support or existing-account password login; temporary failures retain retry guidance. The registration form links to account-access help. Email verification remains required before registration.
+
+Local verification passed **196 unit tests, 115 database integration tests and 43 browser scenarios** (37 core, one hosted-checkout fixture and five registration/recovery scenarios), TypeScript and the production build. Customer account controls at 390px and administrator controls at 320px were visually reviewed; the narrow administrator dialog scrolls to sign-out without horizontal overflow. Provider calls in automated suites were intercepted or mocked.
+
+Read-only AWS inspection confirmed SES in `ap-south-1` is healthy but sandboxed, with only the owner's email identity verified. At the owner's explicit approval, the [prepared production-access request](SES_PRODUCTION_ACCESS_REQUEST.md) was submitted. AWS reports **`PENDING`** and `ProductionAccessEnabled=false`; the submission does not enable unrestricted email yet. The hosted health endpoint returned HTTP 200 with a reachable database. Existing accounts can use password sign-in without email OTP.
+
 ## Current AI demonstration release — deployed and verified
 
 Commit **`82f5cfc02883f8163dcfba791a4e1f4a1293bc0e`** is **Live** in Render deployment **`dep-dbnpes0473hc739u1d2g`**. The dashboard confirmed the exact commit and successful deployment state.

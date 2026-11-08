@@ -76,6 +76,30 @@ describe.sequential("email-verified password registration", () => {
     expect(cookieJar.set).not.toHaveBeenCalled();
   });
 
+  it("directs rejected email delivery to support without exposing a code or creating an account", async () => {
+    const input = profile();
+    vi.mocked(communications.sendEmail).mockRejectedValueOnce(new communications.CommunicationError("AWS_REJECTED", false));
+    const response = await register(request("/api/auth/register", input));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Email verification is unavailable for this address. Please contact support for access, or sign in to an existing account." });
+    expect(await db.emailOtp.count({ where: { email: input.email } })).toBe(0);
+    expect(await db.user.findUnique({ where: { email: input.email } })).toBeNull();
+    expect(cookieJar.set).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["AWS_THROTTLED", true, false],
+    ["AWS_ACCEPTANCE_UNCERTAIN", false, true],
+  ] as const)("keeps temporary recovery guidance for %s and invalidates the unsent code", async (code, retryable, uncertain) => {
+    const input = profile();
+    vi.mocked(communications.sendEmail).mockRejectedValueOnce(new communications.CommunicationError(code, retryable, uncertain));
+    const response = await register(request("/api/auth/register", input));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "The email code could not be sent. Please wait and request another code." });
+    expect(await db.emailOtp.count({ where: { email: input.email } })).toBe(0);
+    expect(await db.user.findUnique({ where: { email: input.email } })).toBeNull();
+  });
+
   it("fails closed without email configuration and rejects passwords in the first signup request", async () => {
     vi.stubEnv("RESEND_API_KEY", "");
     const input = profile();

@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   ChefHat,
   LayoutDashboard,
@@ -13,14 +15,40 @@ import {
   CalendarHeart,
   Settings,
   BrainCircuit,
+  X,
+  ShieldCheck,
+  CircleHelp,
 } from "lucide-react";
 import { useApp } from "./provider";
 import { request } from "@/lib/client";
+import { ErrorNotice } from "./ui";
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname(),
     app = useApp(),
     staff = app.user && app.user.role !== "CUSTOMER";
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [accountError, setAccountError] = useState("");
+  useEffect(() => {
+    setAccountOpen(false);
+    setAccountError("");
+  }, [path, app.user?.id]);
+  async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    setAccountError("");
+    try {
+      await request("/api/auth/logout", "POST", {});
+      // Reload after the session is revoked, even if a subsequent account read would fail.
+      window.location.assign("/");
+    } catch (error) {
+      const message = (error as Error).message;
+      setAccountError(message);
+      if (!accountOpen) app.setToast(message);
+      setSigningOut(false);
+    }
+  }
   const links = staff
     ? [
         { href: "/workspace", label: "Overview", icon: LayoutDashboard },
@@ -64,6 +92,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               href={href}
               aria-label={label}
               title={label}
+              aria-current={path === href ? "page" : undefined}
               className={`nav-link ${path === href ? "active" : ""}`}
             >
               <Icon size={19} />
@@ -96,15 +125,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <button
                 className="icon-button"
                 aria-label="Sign out"
-                onClick={async () => {
-                  try {
-                    await request("/api/auth/logout", "POST", {});
-                    await app.refreshUser();
-                    location.assign("/");
-                  } catch (e) {
-                    app.setToast((e as Error).message);
-                  }
-                }}
+                disabled={signingOut}
+                onClick={() => void signOut()}
               >
                 <LogOut size={18} />
               </button>
@@ -146,6 +168,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
                           ? "Overview"
                           : path.includes("login")
                             ? "Your account"
+                            : path === "/privacy"
+                              ? "Privacy & account"
+                              : path === "/help"
+                                ? "Help & refunds"
                             : "Your orders"}
             </strong>
           </div>
@@ -154,13 +180,52 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="location-label">
               <MapPin size={16} /> Hyderabad
             </span>
-            <Link
-              href={app.user ? (staff ? "/workspace" : "/orders") : "/login"}
-              className="avatar top-avatar"
-              aria-label="Your account"
-            >
-              {app.user?.name[0] || "D"}
-            </Link>
+            {app.user ? (
+              <Dialog.Root open={accountOpen} onOpenChange={(open) => {
+                setAccountOpen(open);
+                if (open) setAccountError("");
+              }}>
+                <Dialog.Trigger asChild>
+                  <button type="button" className="avatar top-avatar account-trigger" aria-label="Your account" title="Your account">
+                    {app.user.name[0]}
+                  </button>
+                </Dialog.Trigger>
+                <Dialog.Portal>
+                  <Dialog.Overlay className="modal-overlay" />
+                  <Dialog.Content className="modal account-dialog">
+                    <div className="modal-heading">
+                      <div>
+                        <Dialog.Title>Your account</Dialog.Title>
+                        <Dialog.Description>Manage your account and find your way around.</Dialog.Description>
+                      </div>
+                      <Dialog.Close className="icon-button" aria-label="Close account">
+                        <X size={20} />
+                      </Dialog.Close>
+                    </div>
+                    <div className="account-summary">
+                      <span className="avatar" aria-hidden="true">{app.user.name[0]}</span>
+                      <div><strong>{app.user.name}</strong><span>{app.user.role.toLowerCase()}</span></div>
+                    </div>
+                    <nav className="account-navigation" aria-label="Account navigation">
+                      {[...links,
+                        { href: "/privacy", label: "Privacy & account", icon: ShieldCheck },
+                        { href: "/help", label: "Help & refunds", icon: CircleHelp },
+                      ].map(({ href, label, icon: Icon }) => (
+                        <Link key={href} href={href} aria-current={path === href ? "page" : undefined} onClick={() => setAccountOpen(false)}>
+                          <Icon size={19} aria-hidden="true" />{label}
+                        </Link>
+                      ))}
+                    </nav>
+                    {accountError && <ErrorNotice message={accountError} />}
+                    <button type="button" className="button secondary account-signout" disabled={signingOut} onClick={() => void signOut()}>
+                      <LogOut size={18} aria-hidden="true" />{signingOut ? "Signing out…" : "Sign out"}
+                    </button>
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
+            ) : (
+              <Link href="/login" className="avatar top-avatar account-trigger" aria-label="Sign in" title="Sign in">D</Link>
+            )}
           </div>
         </header>
         <main>{children}</main>

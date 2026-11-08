@@ -339,6 +339,58 @@ label {
   background: #f1eddf;
   color: #716149;
 }
+.top-avatar.account-trigger {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #e7dfcc;
+  padding: 0;
+}
+.modal.account-dialog {
+  width: min(460px, calc(100vw - 32px));
+}
+.account-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.account-summary > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.account-summary strong,
+.account-summary span:not(.avatar) {
+  display: block;
+}
+.account-summary span:not(.avatar) {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+.account-navigation {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+}
+.account-navigation a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 9px;
+}
+.account-navigation a:hover,
+.account-navigation a[aria-current="page"] {
+  background: #f2f5eb;
+  color: var(--green);
+}
+.account-dialog .account-signout {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+}
 .page {
   padding: 34px 38px 42px;
   max-width: 1660px;

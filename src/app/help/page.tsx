@@ -10,7 +10,12 @@ export default function HelpPage() {
   return <article className="page privacy-page">
     <p className="eyebrow">HERE TO HELP</p>
     <h1>Your order, explained.</h1>
-    <p className="privacy-lead">Find payment receipts, follow a refund and get help with your meal.</p>
+    <p className="privacy-lead">Get help with your account, find payment receipts and follow a refund.</p>
+    <section id="account-access"><h2>Signing in and email codes</h2>
+      <p>Already have an account? <Link href="/login">Sign in with your email or mobile number and password</Link>. You do not need an email code for ordinary sign-in.</p>
+      <p>Creating an account or resetting a password requires a verification code. If the site says email verification is unavailable for your address, contact support to arrange access. Repeated requests will not resolve that restriction.</p>
+      <p>If a code was sent, check your inbox and spam folder. Codes expire after five minutes; use the most recently requested code.</p>
+    </section>
     <section><h2>Payments</h2>
       <p>Your final total includes the displayed GST, delivery charge and applied discounts. Available payment methods appear in the secure checkout window. The kitchen receives your order after the payment provider confirms payment.</p>
       <p>If a payment window closes after money is debited, open <Link href="/orders">your orders</Link> and wait for confirmation before paying again. Keep the payment reference for support. A payment arriving after checkout expires is refunded instead of creating a new kitchen order.</p>
@@ -25,7 +30,7 @@ export default function HelpPage() {
       <p>Verify your email or mobile number in <Link href="/privacy">Privacy & account</Link> to receive order updates when those services are enabled. Your order page stays available if an email or SMS cannot be delivered. Marketing preferences are separate from essential order updates.</p>
     </section>
     <section><h2>Get in touch</h2>
-      <p>Include your order number and a short description of the issue. Never share your password, one-time code, full card number or UPI PIN.</p>
+      <p>Describe the issue and include your order number if you have one. Never share your password, one-time code, full card number or UPI PIN.</p>
       {validEmail ? <a className="button secondary" href={`mailto:${support}`}>Email order support</a>
         : <p>Find the fulfilling outlet and its address on your order. Online support contact details will appear here when the restaurant enables them.</p>}
       <p><Link href="/orders">Open my orders</Link> · <Link href="/privacy">Account and privacy help</Link></p>

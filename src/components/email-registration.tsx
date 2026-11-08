@@ -49,7 +49,7 @@ export function EmailRegistration({ complete }: Props) {
       <label>Create password<input name="password" type="password" autoComplete="new-password" minLength={10} maxLength={128} required placeholder="At least 10 characters" /></label>
       <button type="button" className="text-button" disabled={busy} onClick={() => { setChallenge(null); setError(""); }}>Use another email or request a new code</button>
     </>}
-    {error && <ErrorNotice message={error} />}
+    {error && <><ErrorNotice message={error} /><p className="auth-help"><Link href="/help#account-access">Get help with account access</Link></p></>}
     <button className="button primary full" disabled={busy}>{busy ? "Please wait…" : challenge ? "Verify email and create account" : "Send verification code"}</button>
   </form>;
 }

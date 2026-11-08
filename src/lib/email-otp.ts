@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AppError, rateLimit } from "./auth";
 import { db, serializable } from "./db";
 import { hashPassword, verifyPassword } from "./password";
-import { communicationCapabilities, emailProvider, sendEmail } from "./communications";
+import { CommunicationError, communicationCapabilities, emailProvider, sendEmail } from "./communications";
 import { otpVerifySchema } from "./phone-otp";
 import { optionalPhoneSchema } from "./validation";
 
@@ -48,8 +48,10 @@ export async function requestEmailOtp(input: z.input<typeof emailOtpRequestSchem
   if (!demo) {
     try { await sendEmail(input.email, registration ? "Verify your Deccan Kitchen email" : "Your Deccan Kitchen sign-in code",
       `Your code is ${code}. ${registration ? "Enter it to verify your email and create your account. " : ""}It expires in five minutes and can be used once. If you did not request this code, ignore this email.`, `otp/${id}`); }
-    catch {
+    catch (error) {
       await db.emailOtp.deleteMany({ where: { id } });
+      if (error instanceof CommunicationError && !error.retryable && !error.uncertain)
+        throw new AppError(503, "Email verification is unavailable for this address. Please contact support for access, or sign in to an existing account.");
       throw new AppError(503, "The email code could not be sent. Please wait and request another code.");
     }
   }

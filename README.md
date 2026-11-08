@@ -35,6 +35,7 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 ### Accounts and privacy
 
 - Role-based access for customers, kitchen staff, managers and administrators.
+- Accessible account navigation and sign-out on phones and tablets, with recoverable privacy-setting loads.
 - Privacy notices, marketing preference controls and account-data export.
 - Customer account anonymization and session revocation.
 
@@ -106,7 +107,7 @@ See [live payments, OTP and messaging setup](docs/LIVE_SERVICES.md) for AWS conf
 
 ## Verification
 
-Local verification on **8 November 2026** passed **196 unit tests, 112 database integration tests and 38 browser scenarios** (33 core, one hosted-checkout fixture and four registration/recovery scenarios), plus TypeScript and the production build.
+Local verification on **8 November 2026** passed **196 unit tests, 115 database integration tests and 43 browser scenarios** (37 core, one hosted-checkout fixture and five registration/recovery scenarios), plus TypeScript and the production build.
 
 Commit `82f5cfc02883f8163dcfba791a4e1f4a1293bc0e` is live on Render and passed all 19 hosted checks at 03:00:37 IST on 8 November 2026. Its [CI run 42415842181](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42415842181) passed at 03:05:25 IST with the same test totals, TypeScript, production build, Docker image build, artifact upload and cleanup. See [release readiness](docs/RELEASE_READINESS.md) for evidence.
 

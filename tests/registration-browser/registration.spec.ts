@@ -100,6 +100,21 @@ test("email delivery failure stays on signup and allows a different recipient to
   await expect(page.getByRole("status").filter({ hasText: "We sent a verification code" })).toContainText(email);
 });
 
+test("rejected signup email explains how to get account access", async ({ page }) => {
+  const email = `rejected-${randomUUID()}@customer.test`;
+  await openRegistration(page, email);
+  await page.getByRole("button", { name: "Send verification code", exact: true }).click();
+  await expect(page.locator(".auth-card").getByRole("alert")).toContainText("Email verification is unavailable for this address");
+  await expect(page.getByLabel("Email address", { exact: true })).toHaveValue(email);
+  await expect(page.getByLabel("Six-digit code")).toHaveCount(0);
+  expect((await (await page.request.get("/api/auth/me")).json()).user).toBeNull();
+  await page.getByRole("link", { name: "Get help with account access" }).click();
+  await expect(page).toHaveURL(/\/help#account-access$/);
+  await expect(page.getByRole("heading", { name: "Signing in and email codes" })).toBeVisible();
+  await page.getByRole("link", { name: "Sign in with your email or mobile number and password" }).click();
+  await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
+});
+
 test("forgot password verifies email OTP, revokes old sessions and requires the new password", async ({ page, browser }) => {
   const email = `reset-${randomUUID()}@customer.test`, newPassword = "new-browser-password!";
   const signup = await page.request.post("/api/auth/register", { headers: { origin }, data: { email, name: "Reset browser customer", consent: true } });

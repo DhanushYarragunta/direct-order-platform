@@ -25,6 +25,7 @@ globalThis.fetch = async (input, init) => {
         !/^[^@]+@customer\.test$/.test(message.to[0]))
       throw new Error("Unexpected registration email fixture request.");
     if (message.to[0].startsWith("unavailable-")) return Response.json({ error: "Fixture transport unavailable" }, { status: 503 });
+    if (message.to[0].startsWith("rejected-")) return Response.json({ error: "Fixture recipient rejected" }, { status: 403 });
     writeFileSync(join(outbox, `${challengeId}.json`), JSON.stringify(message), { mode: 0o600 });
     return Response.json({ id: `fixture-${randomUUID()}` });
   }
