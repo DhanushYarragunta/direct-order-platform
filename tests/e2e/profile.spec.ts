@@ -134,9 +134,11 @@ test("another account never inherits the previous customer's phone or delivery a
   await page.goto("/profile");
   await expect(page.getByRole("article", { name: "Home address" })).toBeVisible();
   await page.locator(".profile-nav").getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page).toHaveURL(`${origin}/`);
-  await expect(page.locator(".topbar").getByRole("button", { name: "Change delivery location" })).toContainText("Choose your location");
+  await expect(page).toHaveURL(url => url.pathname === "/login" && url.searchParams.get("next") === "/");
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
+  expect((await (await page.request.get("/api/auth/me")).json()).user).toBeNull();
   await register(page); await page.goto("/profile");
+  await expect(page.locator(".topbar").getByRole("button", { name: "Change delivery location" })).toContainText("Choose your location");
   await page.getByRole("button", { name: "Edit profile", exact: true }).click();
   await expect(page.getByLabel("Mobile number", { exact: true })).toHaveValue("");
   await page.getByRole("dialog", { name: "Edit profile", exact: true }).getByRole("button", { name: "Cancel", exact: true }).click();

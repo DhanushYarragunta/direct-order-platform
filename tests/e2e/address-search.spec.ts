@@ -13,10 +13,16 @@ const searchResult = (results: LocationSuggestion[]) => ({ results, provider: "p
 const json = (value: unknown) => ({ contentType: "application/json", body: JSON.stringify(value) });
 
 test.beforeEach(async ({ page }) => {
+  expect((await page.request.post("/api/auth/demo", {
+    headers: { origin: "http://127.0.0.1:3001" }, data: { account: "customer" },
+  })).ok()).toBeTruthy();
   await page.setViewportSize({ width: 390, height: 844 });
-  // Keep the reusable header's tests independent of accounts, restaurant state
-  // and external providers. Only the locally served application assets are used.
-  await page.route("**/api/auth/me", route => route.fulfill(json({ user: null })));
+  // Authenticate the menu entry, then keep location tests independent of saved
+  // addresses, restaurant state and external providers.
+  const profileResponse = await page.request.get("/api/account/profile");
+  expect(profileResponse.ok()).toBeTruthy();
+  const profile = { ...await profileResponse.json(), addresses: [] };
+  await page.route("**/api/account/profile*", route => route.fulfill(json(profile)));
   const outlets = [
     { id: "kondapur", name: "Kondapur", latitude: 17.462, longitude: 78.357 },
     { id: "gachibowli", name: "Gachibowli", latitude: 17.4401, longitude: 78.3489 },

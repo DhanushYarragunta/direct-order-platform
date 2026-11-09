@@ -1,4 +1,8 @@
 import { MenuScreen } from "@/components/menu-screen";
-export default function Page() {
+import { currentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
+
+export default async function Page() {
+  if (!(await currentUser())) redirect("/login?next=/");
   return <MenuScreen />;
 }

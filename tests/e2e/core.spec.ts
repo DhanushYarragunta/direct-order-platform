@@ -25,6 +25,7 @@ async function screenshot(page: Page, name: string) {
 }
 
 test("responsive real-photo menu and working filters", async ({ page }) => {
+  await demo(page.request, "customer");
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Chicken dum biryani", exact: true }),
@@ -144,6 +145,7 @@ test("menu CMS and outlet stock changes reach the customer menu", async ({
   await manager.getByLabel("Regular price (₹, incl. GST)").fill("325");
   await manager.getByRole("button", { name: "Save dish", exact: true }).click();
   await expect(manager.getByRole("dialog")).toHaveCount(0);
+  await demo(page.request, "customer");
   await page.goto("/");
   const dish = page
     .locator(".dish-card")

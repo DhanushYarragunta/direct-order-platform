@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, ChefHat, Eye, EyeOff, ShieldCheck, UserRound } from "lucide-react";
 import { request } from "@/lib/client";
 import { useApp } from "./provider";
@@ -29,7 +28,6 @@ function PasswordField({ label, name = "password", fresh = false }: { label: str
 
 export function AuthScreen() {
   const app = useApp(),
-    router = useRouter(),
     [view, setView] = useState<AuthView>("login"),
     [identifier, setIdentifier] = useState(""),
     [challenge, setChallenge] = useState<ResetChallenge | null>(null),
@@ -49,7 +47,6 @@ export function AuthScreen() {
     setView(next); setChallenge(null); setError(""); setMessage("");
   }
   async function complete(role: string) {
-    await app.refreshUser();
     const next = new URLSearchParams(location.search).get("next");
     let safeNext: string | null = null;
     if (next?.startsWith("/")) {
@@ -58,7 +55,8 @@ export function AuthScreen() {
         if (target.origin === location.origin) safeNext = `${target.pathname}${target.search}${target.hash}`;
       } catch { /* Malformed return paths use the role's default page. */ }
     }
-    router.push(
+    // Start a fresh document so a prefetched signed-out redirect cannot survive login.
+    window.location.replace(
       safeNext
         ? safeNext
         : role === "CUSTOMER"

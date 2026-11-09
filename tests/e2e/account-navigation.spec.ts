@@ -34,8 +34,8 @@ test("phone customers can navigate account settings and retry a failed sign-out"
   await expect(navigation.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await navigation.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page).toHaveURL(`${origin}/`);
-  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(url => url.pathname === "/login" && url.searchParams.get("next") === "/");
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   expect((await (await page.request.get("/api/auth/me")).json()).user).toBeNull();
   expect(attempts).toBe(2);
 });
@@ -74,7 +74,7 @@ test("tablet staff can read all account navigation and sign out from a narrow sc
   expect(dialogBounds!.x).toBeGreaterThanOrEqual(0);
   expect(dialogBounds!.x + dialogBounds!.width).toBeLessThanOrEqual(320);
   await dialog.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page).toHaveURL(`${origin}/`);
-  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(url => url.pathname === "/login" && url.searchParams.get("next") === "/");
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   expect((await (await page.request.get("/api/auth/me")).json()).user).toBeNull();
 });

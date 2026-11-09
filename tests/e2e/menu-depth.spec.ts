@@ -11,6 +11,7 @@ test("city prices and serving windows publish from the CMS to checkout", async (
   const customer = await browser.newContext({ baseURL: origin });
   await demo(admin.request, "admin");
   await demo(customer.request, "customer");
+  await demo(page.request, "customer");
   const original = (await (await admin.request.get("/api/admin/menu")).json()).items.find((item: { id: string }) => item.id === "chicken-biryani");
   const editable = Object.fromEntries([
     "name", "description", "category", "pricePaise", "familyPricePaise", "portion", "vegetarian", "spice",

@@ -3,6 +3,11 @@ import sharp from "sharp";
 const origin = "http://127.0.0.1:3001";
 
 test("mobile dishes are high on screen and allergen disclosures are readable", async ({ page }) => {
+  // A new account preserves the first-order layout without seeded reorder history.
+  expect((await page.request.post("/api/auth/register", { headers: { origin }, data: {
+    name: "First Order Customer", email: `menu-layout-${crypto.randomUUID()}@example.test`,
+    password: "menu-layout-browser-password", consent: true,
+  } })).status()).toBe(201);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.locator(".dish-card").first()).toBeVisible();

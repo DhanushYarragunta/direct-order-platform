@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  expect((await page.request.post("/api/auth/demo", {
+    headers: { origin: "http://127.0.0.1:3001" }, data: { account: "customer" },
+  })).ok()).toBeTruthy();
+});
+
 test("menu search is visible on phones and clears a previous category when typing", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/");
