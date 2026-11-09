@@ -12,7 +12,7 @@ const labels: Record<string, string> = { OPENING: "Demo starting points", EARN: 
 
 export function RewardsWallet() {
   const resource = useResource<Wallet>("/api/rewards", "/api/events?scope=orders");
-  return <section className="panel rewards-wallet" aria-label="Your loyalty rewards">
+  return <section id="rewards" className="panel rewards-wallet" aria-label="Your loyalty rewards">
     <div className="rewards-wallet-header">
       <div><h2>A little thank you, every time.</h2><p>Earn 1 point per ₹100 paid after handoff. Each point is worth ₹1.</p></div>
       <div className="rewards-balance">{resource.data?.balance ?? "…"} <small>available points</small></div>

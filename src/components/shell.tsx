@@ -18,10 +18,13 @@ import {
   X,
   ShieldCheck,
   CircleHelp,
+  UserRound,
+  Menu,
 } from "lucide-react";
 import { useApp } from "./provider";
 import { request } from "@/lib/client";
 import { ErrorNotice } from "./ui";
+import { DeliveryLocationButton, DeliveryLocationDialog } from "./delivery-location";
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname(),
@@ -117,11 +120,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
           {app.user ? (
             <div className="account">
+              <Link href="/profile" className="account-profile-link" aria-label="Your profile">
               <span className="avatar">{app.user.name.slice(0, 1)}</span>
               <div>
                 <strong>{app.user.name}</strong>
                 <small>{app.user.role.toLowerCase()}</small>
               </div>
+              </Link>
               <button
                 className="icon-button"
                 aria-label="Sign out"
@@ -168,6 +173,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                           ? "Overview"
                           : path.includes("login")
                             ? "Your account"
+                            : path === "/profile"
+                              ? "Your profile"
                             : path === "/privacy"
                               ? "Privacy & account"
                               : path === "/help"
@@ -177,17 +184,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="topbar-right">
             {app.demoMode && <span className="demo-pill">DEMO</span>}
-            <span className="location-label">
+            {!staff ? <DeliveryLocationButton /> : <span className="location-label">
               <MapPin size={16} /> Hyderabad
-            </span>
+            </span>}
             {app.user ? (
+              <>{staff && (
               <Dialog.Root open={accountOpen} onOpenChange={(open) => {
                 setAccountOpen(open);
                 if (open) setAccountError("");
               }}>
                 <Dialog.Trigger asChild>
-                  <button type="button" className="avatar top-avatar account-trigger" aria-label="Your account" title="Your account">
-                    {app.user.name[0]}
+                  <button type="button" className="icon-button workspace-menu-trigger" aria-label="Workspace menu" title="Workspace menu">
+                    <Menu size={21} />
                   </button>
                 </Dialog.Trigger>
                 <Dialog.Portal>
@@ -207,7 +215,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                       <div><strong>{app.user.name}</strong><span>{app.user.role.toLowerCase()}</span></div>
                     </div>
                     <nav className="account-navigation" aria-label="Account navigation">
-                      {[...links,
+                      {[{ href: "/profile", label: "Your profile", icon: UserRound }, ...links,
                         { href: "/privacy", label: "Privacy & account", icon: ShieldCheck },
                         { href: "/help", label: "Help & refunds", icon: CircleHelp },
                       ].map(({ href, label, icon: Icon }) => (
@@ -223,11 +231,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   </Dialog.Content>
                 </Dialog.Portal>
               </Dialog.Root>
+              )}<Link href="/profile" className="avatar top-avatar account-trigger" aria-label="Your profile" title="Your profile">{app.user.name[0]}</Link></>
             ) : (
               <Link href="/login" className="avatar top-avatar account-trigger" aria-label="Sign in" title="Sign in">D</Link>
             )}
           </div>
         </header>
+        <DeliveryLocationDialog />
         <main>{children}</main>
         <footer className="footer">
           <Link href="/privacy">Privacy & account</Link>

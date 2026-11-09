@@ -4,18 +4,28 @@ const origin = "http://127.0.0.1:3001";
 
 test("mobile delivery chooses Kukatpally without GPS and shows wait, fee and completion", async ({ page, browser }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/api/locations/search?*", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+    provider: "photon", attribution: "OpenStreetMap test fixture", results: [{ id: "test-kukatpally", name: "Kukatpally",
+      address: "Kukatpally, Hyderabad", city: "Hyderabad", pincode: "500072", latitude: 17.4948, longitude: 78.3996,
+      kind: "area" }],
+  }) }));
   expect((await page.request.post("/api/auth/demo", { headers: { origin }, data: { account: "customer" } })).ok()).toBeTruthy();
   await page.goto("/");
   await page.getByRole("button", { name: "Add Chicken dum biryani", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: /Add to order/ }).click();
   await page.getByRole("link", { name: "Continue to checkout" }).click();
   await page.getByLabel("Mobile number").fill("9000000000");
-  await page.getByRole("button", { name: "Delivery Choose your locality · demo", exact: true }).click();
+  await page.getByRole("button", { name: "Delivery To your doorstep", exact: true }).click();
+  await page.locator(".checkout-location-action").click();
+  const location = page.getByRole("dialog", { name: "Where should we deliver?", exact: true });
+  await location.getByRole("combobox", { name: "Search delivery location", exact: true }).fill("Kukatpally");
+  await location.getByRole("option").filter({ hasText: "Kukatpally" }).click();
+  await location.getByRole("button", { name: "Use this location", exact: true }).click();
+  await expect(location).not.toBeVisible();
   await page.getByRole("textbox", { name: "Delivery address", exact: true }).fill("Test flat, Kukatpally centre");
-  await page.getByLabel("Delivery locality / pincode").selectOption("kukatpally");
   await expect(page.getByLabel("Mobile number")).toHaveValue("9000000000");
   await expect(page.getByRole("textbox", { name: "Delivery address", exact: true })).toHaveValue("Test flat, Kukatpally centre");
-  await page.getByRole("checkbox", { name: /My delivery address is in the selected locality/ }).check();
+  await page.getByRole("checkbox", { name: /My delivery address is in this area/ }).check();
   await expect(page.locator(".pickup-address").getByText("Kukatpally", { exact: true })).toBeVisible();
   await expect(page.locator(".pickup-address").getByText(/Estimated preparation: \d+ min/)).toBeVisible();
   await expect(page.locator(".cart-summary").getByText("₹40", { exact: true })).toBeVisible();
@@ -28,6 +38,10 @@ test("mobile delivery chooses Kukatpally without GPS and shows wait, fee and com
   const id = page.url().split("/").pop()!;
   const order = await (await page.request.get(`/api/orders/${id}`)).json();
   expect(order.outletId).toBe("kukatpally");
+  expect(order.deliveryLocalityId).toBeNull();
+  expect(order.address).toContain("Test flat, Kukatpally centre");
+  expect(order.address).toContain("Kukatpally, Hyderabad");
+  expect(order.address).toContain("500072");
   expect(order.deliveryFeePaise).toBe(4000);
   expect(order.checkoutDurationMs).toBeGreaterThan(0);
   expect(order.checkoutMetricSource).toBe("demo");
@@ -53,8 +67,14 @@ test("checkout GPS automatically moves a Kondapur cart to the nearest eligible o
   await page.getByRole("button", { name: "Add Chicken dum biryani", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: /Add to order/ }).click();
   await page.getByRole("link", { name: "Continue to checkout" }).click();
-  await page.getByRole("button", { name: "Delivery Choose your locality · demo", exact: true }).click();
-  await page.getByRole("button", { name: "Use my location to check delivery" }).click();
+  await page.getByRole("button", { name: "Delivery To your doorstep", exact: true }).click();
+  await page.locator(".checkout-location-action").click();
+  const location = page.getByRole("dialog", { name: "Where should we deliver?", exact: true });
+  await location.getByRole("button", { name: "Use current location", exact: false }).click();
+  await location.getByRole("button", { name: "Use this location", exact: true }).click();
+  await expect(location).not.toBeVisible();
+  await page.getByLabel("Mobile number").fill("9000000000");
+  await page.getByRole("textbox", { name: "Delivery address", exact: true }).fill("GPS test flat, Kukatpally");
   await expect(page.locator(".pickup-address").getByText("Kukatpally", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Continue to payment/ })).toBeEnabled();
 });

@@ -6,17 +6,17 @@ import {
   Check,
   Clock3,
   Flame,
-  LocateFixed,
   MapPin,
   Plus,
-  Search,
   ShoppingBag,
   UtensilsCrossed,
 } from "lucide-react";
-import { CATEGORIES, chooseOutlet, money } from "@/lib/domain";
+import { CATEGORIES, money } from "@/lib/domain";
 import type { MenuItem } from "@/lib/types";
 import { useApp } from "./provider";
 import { Cart } from "./cart";
+import { FoodSearch } from "./food-search";
+import { normalizeMenuQuery, searchMenu } from "@/lib/menu-search";
 import "./menu-depth.css";
 import "./customer-quality.css";
 import {
@@ -38,17 +38,14 @@ export function MenuScreen() {
     [selectedId, setSelectedId] = useState<string | null>(null),
     [portion, setPortion] = useState<"regular" | "family">("regular"),
     [extras, setExtras] = useState<string[]>([]),
-    [quantity, setQuantity] = useState(1),
-    [locating, setLocating] = useState(false);
-  const items =
-    data?.items.filter(
-      (i) =>
-        (category === "All dishes" || i.category === category) &&
-        (!veg || i.vegetarian) &&
-        `${i.name} ${i.description}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-    ) || [];
+    [quantity, setQuantity] = useState(1);
+  const searching = !!normalizeMenuQuery(query);
+  const items = searchMenu(data?.items || [], query).filter(item =>
+    (category === "All dishes" || item.category === category) && (!veg || item.vegetarian));
+  function changeQuery(value: string) {
+    setQuery(value);
+    setCategory("All dishes");
+  }
   const groups = CATEGORIES.map((name) => ({ name, items: items.filter((item) => item.category === name) }))
     .filter((group) => group.items.length > 0);
   function customise(item: MenuItem) {
@@ -56,35 +53,6 @@ export function MenuScreen() {
     setPortion("regular");
     setExtras([]);
     setQuantity(1);
-  }
-  function locate() {
-    if (!navigator.geolocation) {
-      app.setToast("Location is unavailable. Choose your kitchen manually.");
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const outlet = chooseOutlet(data?.outlets || [], position.coords);
-        if (outlet) {
-          app.setOutletId(outlet.id);
-          app.setToast(
-            `Your nearest kitchen is ${outlet.name}. Cart availability has been updated.`,
-          );
-        } else
-          app.setToast(
-            "You're outside our delivery area. You can still order for pickup.",
-          );
-        setLocating(false);
-      },
-      () => {
-        setLocating(false);
-        app.setToast(
-          "We couldn't access your location. Choose a kitchen below.",
-        );
-      },
-      { timeout: 10000 },
-    );
   }
   const selected = data?.items.find((item) => item.id === selectedId) || null;
   const selectedAvailable = selected?.available && (portion !== "family" || selected.familyPricePaise !== null) && extras.every((id) => data?.addOns.some((extra) => extra.id === id));
@@ -125,15 +93,20 @@ export function MenuScreen() {
           </div>
           <button
             className="icon-button"
-            aria-label="Find nearest kitchen"
-            disabled={locating}
-            onClick={locate}
+            type="button"
+            aria-label="Change delivery location"
+            title="Search for a delivery address"
+            onClick={() => app.setLocationOpen(true)}
           >
-            <LocateFixed size={18} className={locating ? "spin" : ""} />
+            <MapPin size={18} />
           </button>
         </div>
       </div>
-      <section className="hero">
+      <FoodSearch query={query} onChange={changeQuery} items={data?.items || []}
+        onCategoryChange={value => { setQuery(value); setCategory(value); }}
+        vegetarian={veg} onVegetarianChange={setVeg} resultCount={items.length}
+        onSubmit={() => document.getElementById("menu")?.scrollIntoView({ block: "start", behavior: "smooth" })} />
+      {!searching && <section className="hero">
         <div className="hero-copy">
           <span className="hero-kicker">
             <span /> THE HOUSE SPECIAL
@@ -170,10 +143,10 @@ export function MenuScreen() {
             </strong>
           </div>
         </div>
-      </section>
+      </section>}
       <div className="menu-layout">
         <section className="menu-content" id="menu">
-          {!!suggestions.length && <section className="reorder-section" aria-label="Order again suggestions">
+          {!searching && !!suggestions.length && <section className="reorder-section" aria-label="Order again suggestions">
             <div className="section-heading"><div><h2>Your usual, made fresh.</h2><p>Favourites from your recent orders at {data?.outlet.name}. Choose a dish to review portions and extras.</p></div></div>
             <div className="reorder-items">
               {suggestions.map((item) => <div className="reorder-item" key={item.id}>
@@ -182,41 +155,17 @@ export function MenuScreen() {
               </div>)}
             </div>
           </section>}
-          <div className="section-heading">
+          <div className="section-heading search-results-heading">
             <div>
-              <p className="eyebrow">MADE FRESH, EVERY DAY</p>
+              <p className="eyebrow">{searching ? "FIND YOUR FAVOURITE" : "MADE FRESH, EVERY DAY"}</p>
               <h2>
-                Explore our menu{" "}
+                {searching ? "Search results" : "Explore our menu"}{" "}
                 <span className="count-label">
-                  {data?.items.length || 0} dishes
+                  {searching ? items.length : data?.items.length || 0} dishes
                 </span>
               </h2>
             </div>
             <span className="inclusive-note">All prices include 5% GST</span>
-          </div>
-          <div className="menu-controls">
-            <div className="search-field">
-              <Search size={18} />
-              <input
-                aria-label="Search dishes"
-                placeholder="Find your craving…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {query && (
-                <button onClick={() => setQuery("")} aria-label="Clear search">
-                  ×
-                </button>
-              )}
-            </div>
-            <label className="veg-toggle">
-              <input
-                type="checkbox"
-                checked={veg}
-                onChange={(e) => setVeg(e.target.checked)}
-              />
-              <Diet veg /> Veg only
-            </label>
           </div>
           <div className="category-tabs" aria-label="Menu categories">
             {["All dishes", ...CATEGORIES].map((c) => (
@@ -225,7 +174,7 @@ export function MenuScreen() {
                 aria-pressed={category === c}
                 className={category === c ? "selected" : ""}
                 key={c}
-                onClick={() => setCategory(c)}
+                onClick={() => { setCategory(c); setQuery(""); }}
               >
                 {c === "All dishes" && <UtensilsCrossed size={15} />} {c}
                 <span className="category-count" aria-hidden="true">{c === "All dishes" ? data?.items.length || 0 : data?.items.filter(item => item.category === c).length || 0}</span>
@@ -296,7 +245,7 @@ export function MenuScreen() {
           ) : (
             !error && (
               <Empty title="No dishes found">
-                <p>Try another search or category.</p>
+                <p>{searching ? `We couldn’t find a match for “${query.trim()}”${veg ? " with Veg only selected" : ""}. Try a dish, ingredient or category.` : "Try another category or turn off Veg only."}</p>
                 <button
                   className="button secondary"
                   onClick={() => {

@@ -1,10 +1,20 @@
 # Release readiness — 9 November 2026
 
+## Profile, saved addresses and search — verified locally, pending deployment
+
+The customer avatar now opens a profile inspired by the supplied Swiggy/Zomato references: identity card, Edit profile, quick actions, grouped account links and saved-address management. Customers can edit their name and mobile number, save up to ten Home/Work/Other addresses and choose a default. The default address and recipient number fill checkout after a reload. Staff profiles remain read-only and retain their workspace navigation.
+
+Food search adds dish/category suggestions, keyboard selection, vegetarian filtering and clear/reset states. Delivery search accepts typed Hyderabad areas, buildings and landmarks through Photon/OpenStreetMap; supported-area centres remain a labelled fallback. Saved addresses are account-scoped, exported with account data and removed by account erasure. The additive eighth migration is `20261109090000_customer_profiles`.
+
+Verification passed **227 unit tests, 128 database integration tests and 55 browser scenarios** (49 core, one hosted-checkout fixture and five registration/recovery scenarios), TypeScript and the production build. Browser checks cover persistent defaults, recipient autofill, failed refresh recovery, account switching, delayed address-save completion, stale-quote invalidation, typed-location delivery, GPS routing and existing payment/signup flows. The revised profile was visually reviewed at 320px, 390px and 1440px. Evidence: `.local/core-verification.json`, `.local/gateway-browser.json`, `.local/registration-browser.json` and `.local/screenshots/profile-*.png`. The integration tests passed before the final frontend refinements; the core browser suite was rerun against the final production build.
+
+The local preview is available at `http://127.0.0.1:3000/profile`, using simulated payments with transactional messaging disabled. This feature revision has not been pushed or deployed. The hosted release below remains unchanged and will need its own migration/deployment verification when this revision is published. Provider fixtures in automated suites do not establish live payment or email delivery.
+
 ## Current account access release — deployed and verified
 
 Commit **`27546c0a125688351033ef7ba1439dc950b1565e`** is **Live** in Render deployment **`dep-dbo4iffavr4c73b1erhg`**. On **9 November 2026**, the signed-in Render dashboard independently confirmed the exact commit, deployment and owner-approved **My Workspace**. Recent application logs show all seven migrations found, no pending migrations and successful startup, with no application errors visible in the reviewed one-hour window.
 
-The current changes add an accessible account dialog with sign-out on phones and tablets, recoverable sign-out errors, retryable privacy preferences and accurate deletion confirmation even if the follow-up account refresh fails. Deterministic email-provider rejections now direct users to support or existing-account password login; temporary failures retain retry guidance. The registration form links to account-access help. Email verification remains required before registration.
+This deployed release adds an accessible account dialog with sign-out on phones and tablets, recoverable sign-out errors, retryable privacy preferences and accurate deletion confirmation even if the follow-up account refresh fails. Deterministic email-provider rejections now direct users to support or existing-account password login; temporary failures retain retry guidance. The registration form links to account-access help. Email verification remains required before registration.
 
 Local verification passed **196 unit tests, 115 database integration tests and 43 browser scenarios** (37 core, one hosted-checkout fixture and five registration/recovery scenarios), TypeScript and the production build. Customer account controls at 390px and administrator controls at 320px were visually reviewed; the narrow administrator dialog scrolls to sign-out without horizontal overflow. Provider calls in automated suites were intercepted or mocked.
 

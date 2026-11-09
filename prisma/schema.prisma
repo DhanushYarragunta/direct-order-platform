@@ -61,6 +61,28 @@ model User {
   audits        Audit[]
   loyaltyEntries LoyaltyEntry[]
   cateringRequests CateringRequest[]
+  addresses     SavedAddress[]
+}
+
+model SavedAddress {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label         String
+  recipientName String
+  phone         String
+  addressLine   String
+  area          String
+  city          String
+  pincode       String   @default("")
+  latitude      Float
+  longitude     Float
+  localityId    String?
+  locationKind  String   @default("place")
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([userId, createdAt])
 }
 
 model Session {

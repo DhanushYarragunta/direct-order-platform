@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  LocateFixed,
   MapPin,
   ShoppingBag,
   Truck,
@@ -16,7 +15,7 @@ import { useApp } from "./provider";
 import { Cart } from "./cart";
 import { Empty, ErrorNotice, Loading } from "./ui";
 import type { CheckoutQuote } from "@/lib/types";
-import { DELIVERY_LOCALITIES, deliveryOutlet } from "@/lib/delivery";
+import { fullDeliveryAddress } from "@/lib/profile-types";
 import { checkoutStart } from "@/lib/checkout-timing";
 import { preparationExplanation } from "@/lib/preparation-explanation";
 import "./rewards.css";
@@ -25,22 +24,44 @@ export function CheckoutScreen() {
   const app = useApp(),
     router = useRouter(),
     [fulfillment, setFulfillment] = useState("pickup"),
-    [position, setPosition] = useState<{
-      latitude: number;
-      longitude: number;
-    } | null>(null),
     [busy, setBusy] = useState(false),
-    [locating, setLocating] = useState(false),
     [error, setError] = useState("");
   const attempt = useRef({ signature: "", key: "" });
   const [couponDraft, setCouponDraft] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [useLoyalty, setUseLoyalty] = useState(false);
-  const [localityId, setLocalityId] = useState("");
   const [localityConfirmed, setLocalityConfirmed] = useState(false);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
+  const phoneEdited = useRef(false), fulfillmentEdited = useRef(false);
+  const detailsOwner = useRef<string | null>(null), appliedLocation = useRef("");
+  const selectedLocation = app.deliveryLocation;
+  const localityId = selectedLocation?.localityId;
+  const position = selectedLocation ? { latitude: selectedLocation.latitude, longitude: selectedLocation.longitude } : null;
+  const selectionKey = selectedLocation ? JSON.stringify(selectedLocation) : "";
+  useEffect(() => {
+    const owner = app.user?.id || null;
+    if (detailsOwner.current === owner) return;
+    detailsOwner.current = owner; appliedLocation.current = "";
+    phoneEdited.current = false; fulfillmentEdited.current = false;
+    setPhone(""); setAddress(""); setNote(""); setLocalityConfirmed(false);
+    setFulfillment("pickup");
+  }, [app.user?.id]);
+  useEffect(() => {
+    if (!phoneEdited.current && !selectedLocation?.phone && app.profile.data)
+      setPhone(app.profile.data.phone || "");
+  }, [app.profile.data?.phone, selectedLocation?.phone, app.user?.id]);
+  useEffect(() => {
+    if (selectionKey === appliedLocation.current) return;
+    appliedLocation.current = selectionKey;
+    setError(""); setQuoteError("");
+    if (!selectedLocation) { setAddress(""); setLocalityConfirmed(false); return; }
+    setLocalityConfirmed(!!selectedLocation.addressId);
+    setAddress(selectedLocation.addressLine ? fullDeliveryAddress({ ...selectedLocation, addressLine: selectedLocation.addressLine }) : "");
+    if (selectedLocation.phone) { setPhone(selectedLocation.phone); phoneEdited.current = false; }
+    if (!fulfillmentEdited.current) setFulfillment("delivery");
+  }, [selectionKey, app.user?.id]);
   const startedAt = useRef<string | null>(null);
   const [quoteResult, setQuoteResult] = useState<{ signature: string; value: CheckoutQuote } | null>(null);
   const [quoteError, setQuoteError] = useState("");
@@ -49,7 +70,8 @@ export function CheckoutScreen() {
   const hasLocation = !!localityId || !!position;
   const quoteInput = JSON.stringify({ outletId: app.outletId, lines: app.cart, couponCode, useLoyalty, fulfillment,
     ...(fulfillment === "delivery" ? location : {}) });
-  const quoteSignature = `${quoteInput}:${app.total}:${app.unavailable}:${app.user?.id}`;
+  // A location change invalidates the previous quote before the form's autofill effect runs.
+  const quoteSignature = `${quoteInput}:${app.total}:${app.unavailable}:${app.user?.id}:${fulfillment === "delivery" ? selectionKey : ""}`;
   const quote = quoteResult?.signature === quoteSignature ? quoteResult.value : null;
   useEffect(() => {
     if (app.cartReady && app.cart.length && !startedAt.current) startedAt.current = checkoutStart();
@@ -126,7 +148,8 @@ export function CheckoutScreen() {
       outletId: app.outletId,
       lines: app.cart,
       fulfillment,
-      address: fulfillment === "delivery" ? address : "",
+      address: fulfillment === "delivery" ? (selectedLocation && !selectedLocation.addressId
+        ? fullDeliveryAddress({ addressLine: address, area: selectedLocation.area, city: selectedLocation.city, pincode: selectedLocation.pincode }) : address) : "",
       phone,
       note,
       couponCode: quote.couponCode || undefined,
@@ -153,42 +176,6 @@ export function CheckoutScreen() {
     } finally {
       setBusy(false);
     }
-  }
-  function selectDeliveryLocation(value: { latitude: number; longitude: number } | { localityId: string }) {
-    setError("");
-    try {
-      const selected = deliveryOutlet(app.menu.data?.outlets || [], value);
-      if (selected.id !== app.outletId) {
-        app.setOutletId(selected.id);
-        app.setToast(`Delivery routed to ${selected.name}. Review the updated menu and total.`);
-      }
-    } catch (e) { setError((e as Error).message); }
-  }
-  function locate() {
-    setLocating(true);
-    if (!navigator.geolocation) {
-      setError("Your browser does not support location. Choose a listed locality or pickup.");
-      setLocating(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        const point = {
-          latitude: p.coords.latitude,
-          longitude: p.coords.longitude,
-        };
-        setLocalityId(""); setLocalityConfirmed(false); setPosition(point);
-        selectDeliveryLocation(point);
-        setLocating(false);
-      },
-      () => {
-        setError(
-          "Location could not be read. Choose a listed locality or pickup instead.",
-        );
-        setLocating(false);
-      },
-      { timeout: 10000 },
-    );
   }
   return (
     <div className="page narrow-page">
@@ -217,7 +204,7 @@ export function CheckoutScreen() {
                 {
                   value: "delivery",
                   label: "Delivery",
-                  detail: "Choose your locality · demo",
+                  detail: "To your doorstep",
                   icon: Truck,
                 },
               ].map(({ value, label, detail, icon: Icon }) => (
@@ -225,7 +212,7 @@ export function CheckoutScreen() {
                   type="button"
                   key={value}
                   className={`choice ${value === fulfillment ? "chosen" : ""}`}
-                  onClick={() => { setFulfillment(value); setError(""); setQuoteError(""); }}
+                  onClick={() => { fulfillmentEdited.current = true; setFulfillment(value); setError(""); setQuoteError(""); }}
                 >
                   <Icon size={22} />
                   <span>
@@ -240,7 +227,7 @@ export function CheckoutScreen() {
               <div>
                 <strong>{app.menu.data?.outlet.name}</strong>
                 <p>{app.menu.data?.outlet.address}</p>
-                <p role="status"><strong>{quote ? `Estimated preparation: ${quote.estimateMinutes} min` : fulfillment === "delivery" && !hasLocation ? "Choose your delivery locality to see the wait." : "Checking the kitchen wait…"}</strong></p>
+                <p role="status"><strong>{quote ? `Estimated preparation: ${quote.estimateMinutes} min` : fulfillment === "delivery" && !hasLocation ? "Choose your delivery address to see the wait." : "Checking the kitchen wait…"}</strong></p>
                 {quote && <small>{preparationExplanation(quote)} Minimum {quote.minimumMinutes} min. Refreshed every 30 seconds; confirmed on payment. Travel time is additional.</small>}
                 {fulfillment === "delivery" && <p>Delivery minimum {money(app.menu.data.outlet.minDeliveryPaise)}. Fee {money(app.menu.data.outlet.deliveryFeePaise)}; free from {money(app.menu.data.outlet.freeDeliveryAbovePaise)} before discounts. Demo policy.</p>}
               </div>
@@ -250,12 +237,14 @@ export function CheckoutScreen() {
             <h2>
               <span className="step-number">02</span> Your details
             </h2>
-            <label>
-              Mobile number
+            <div className="checkout-detail-field">
+              <label htmlFor="checkout-phone">Mobile number</label>
               <input
+                id="checkout-phone"
+                aria-describedby="checkout-phone-help"
                 name="phone"
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                onChange={(event) => { phoneEdited.current = true; setPhone(event.target.value); }}
                 type="tel"
                 inputMode="numeric"
                 pattern="[6-9][0-9]{9}"
@@ -263,53 +252,33 @@ export function CheckoutScreen() {
                 required
                 placeholder="10-digit Indian mobile number"
               />
-              <small>
-                For this order only. Messages are simulated in the demo.
+              <small id="checkout-phone-help">
+                {app.profile.data?.phone ? "Your saved number. Changes here apply to this order only." : <Link href="/profile">Save your phone in your profile for next time.</Link>}
               </small>
-            </label>
+            </div>
             {fulfillment === "delivery" && (
               <>
-                <label>
-                  Delivery locality / pincode
-                  <select value={localityId} onChange={(event) => {
-                    const value = event.target.value;
-                    setLocalityId(value); setLocalityConfirmed(false); setPosition(null);
-                    if (value) selectDeliveryLocation({ localityId: value });
-                  }}>
-                    <option value="">Choose a locality or use GPS below</option>
-                    {DELIVERY_LOCALITIES.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.pincode}</option>)}
-                  </select>
-                  <small>These are curated demo service areas. A pincode can cover a larger area; this does not geocode your street address.</small>
-                </label>
-                {localityId && <label className="reward-toggle"><input type="checkbox" checked={localityConfirmed} required onChange={(event) => setLocalityConfirmed(event.target.checked)} /><span>My delivery address is in the selected locality. I understand coverage uses its centre point in this demo.</span></label>}
-                <label>
-                  Delivery address
-                  <textarea
-                    name="address"
-                    value={address}
-                    onChange={(event) => setAddress(event.target.value)}
-                    required
-                    minLength={8}
-                    maxLength={300}
-                    placeholder="Flat, building, street and landmark"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="button secondary"
-                  onClick={locate}
-                  disabled={locating}
-                >
-                  <LocateFixed size={17} />
-                  {locating
-                    ? "Finding your location…"
-                    : position
-                      ? "Location captured · update"
-                      : "Use my location to check delivery"}
+                {selectedLocation ? <div className="checkout-saved-address"><MapPin size={22} /><div>
+                  <strong>{selectedLocation.addressId ? `${selectedLocation.label} · Saved address` : selectedLocation.label}</strong>
+                  <p>{selectedLocation.area}</p>
+                  {selectedLocation.kind === "area" && <small>Delivery coverage uses this area's centre point.</small>}
+                </div></div> : <p>Search your area or choose a saved address to check delivery.</p>}
+                <button type="button" className="button secondary checkout-location-action" onClick={() => app.setLocationOpen(true)}>
+                  <MapPin size={18} />{selectedLocation ? "Change delivery address" : "Choose delivery address"}<ArrowRight size={17} />
                 </button>
-                <small>
-                  GPS uses your current position. Use it only when you are at the delivery address.
-                </small>
+                {selectedLocation && <>
+                  <div className="checkout-detail-field">
+                    <label htmlFor="checkout-address">Delivery address</label>
+                    <textarea id="checkout-address" aria-describedby="checkout-address-help" name="address" value={address} onChange={event => setAddress(event.target.value)} required minLength={8}
+                      maxLength={selectedLocation.addressId ? 300 : 120} autoComplete="street-address"
+                      placeholder="Flat / house, building, street and landmark" />
+                    <small id="checkout-address-help">{selectedLocation.addressId ? "Changes here apply to this order only. Change the location above for another area." : "Add your flat, building and street. We'll include the selected area."}</small>
+                  </div>
+                  {selectedLocation.kind === "area" && !selectedLocation.addressId && <label className="profile-checkbox">
+                    <input type="checkbox" checked={localityConfirmed} required onChange={event => setLocalityConfirmed(event.target.checked)} />
+                    <span>My delivery address is in this area. I understand coverage uses its centre point.</span>
+                  </label>}
+                </>}
               </>
             )}
             <label>
@@ -361,12 +330,12 @@ export function CheckoutScreen() {
                 !quote ||
                 app.unavailable ||
                 !!app.menu.error ||
-                (fulfillment === "delivery" && (!hasLocation || (!!localityId && !localityConfirmed)))
+                (fulfillment === "delivery" && (!hasLocation || ((!!localityId || (selectedLocation?.kind === "area" && !selectedLocation.addressId)) && !localityConfirmed)))
               }
             >
               {busy
                 ? "Preparing checkout…"
-                : fulfillment === "delivery" && !hasLocation ? "Choose delivery locality" : !quote ? "Checking your total…" : `Continue to payment · ${money(quote.totalPaise)}`}
+                : fulfillment === "delivery" && !hasLocation ? "Choose delivery address" : !quote ? "Checking your total…" : `Continue to payment · ${money(quote.totalPaise)}`}
               <ArrowRight size={17} />
             </button>
           </div>

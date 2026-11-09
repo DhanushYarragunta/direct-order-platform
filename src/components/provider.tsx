@@ -11,6 +11,7 @@ import {
 import { cartLineKey, type CartLine } from "@/lib/domain";
 import { request, useResource } from "@/lib/client";
 import type { MenuData, User } from "@/lib/types";
+import { useDeliveryProfile } from "./use-delivery-profile";
 import {
   CART_STORAGE_KEY, CHECKOUT_STORAGE_KEY, CART_CONSUME_LOCK, cartSnapshotSchema,
   pendingCheckoutsSchema, cartAfterEdit, cartAfterPayment, type CartSnapshot, type PendingCheckout,
@@ -189,7 +190,9 @@ function useStore(demoMode: boolean) {
       l.addOnIds.some((id) => !menu.data?.addOns.some((a) => a.id === id))
     );
   });
+  const deliveryProfile = useDeliveryProfile(user, authReady, menu.data?.outlets, setOutletId, setToast);
   return {
+    ...deliveryProfile,
     user,
     authReady,
     refreshUser,

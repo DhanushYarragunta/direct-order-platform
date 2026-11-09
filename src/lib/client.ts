@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 
 export class ApiError extends Error {
   constructor(
@@ -46,6 +46,11 @@ export function useResource<T>(url: string | null, stream?: string) {
     [connection, setConnection] = useState<ConnectionState>("connecting"),
     [lastSynced, setLastSynced] = useState<number | null>(null);
   const loader = useRef<(() => Promise<void>) | null>(null);
+  const mutationRevision = useRef(0);
+  const mutate = useCallback((update: SetStateAction<T | null>) => {
+    mutationRevision.current += 1;
+    setData(update);
+  }, []);
   const refresh = useCallback(async () => { await loader.current?.(); }, []);
   useEffect(() => {
     let alive = true, lastSignal = 0, lastAttempt = 0, lastConnect = 0, dataHealthy = false;
@@ -66,13 +71,16 @@ export function useResource<T>(url: string | null, stream?: string) {
       if (pending) { reloadAfter = true; return pending; }
       lastAttempt = Date.now();
       const controller = new AbortController();
+      const startedRevision = mutationRevision.current;
       currentRequest = controller;
       const timeout = setTimeout(() => controller.abort(), 10000);
       pending = (async () => {
         try {
           const value = await request<T>(url, "GET", undefined, controller.signal);
           if (alive) {
-            dataHealthy = true; setData(value); setError(""); setLastSynced(Date.now());
+            dataHealthy = true;
+            if (startedRevision === mutationRevision.current) setData(value);
+            setError(""); setLastSynced(Date.now());
           }
         } catch (e) {
           if (alive) {
@@ -123,5 +131,5 @@ export function useResource<T>(url: string | null, stream?: string) {
       window.removeEventListener("offline", offline); window.removeEventListener("online", online);
     };
   }, [url, stream]);
-  return { data, error, loading, refresh, connection, lastSynced };
+  return { data, error, loading, refresh, mutate, connection, lastSynced };
 }

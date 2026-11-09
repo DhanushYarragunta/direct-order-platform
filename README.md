@@ -7,7 +7,9 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 ### Customer ordering
 
 - Browse 60 dishes across nine categories with dietary information, allergens, portions and add-ons.
-- Choose delivery by GPS or supported locality with automatic outlet routing.
+- Search dishes and categories with suggestions, keyboard navigation and vegetarian filtering.
+- Type a Hyderabad area, building or landmark to find delivery locations, or use GPS, with automatic outlet routing.
+- Save Home, Work and Other addresses, choose a default, and reuse the delivery address and recipient phone at checkout.
 - Review preparation estimates, delivery charges, coupons and loyalty discounts before payment.
 - Pay through Razorpay hosted checkout, with signed webhook verification and automatic reconciliation.
 - Download itemized PDF payment receipts and track confirmed or pending refunds.
@@ -36,8 +38,11 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 
 - Role-based access for customers, kitchen staff, managers and administrators.
 - Accessible account navigation and sign-out on phones and tablets, with recoverable privacy-setting loads.
+- A responsive profile with editable name/mobile number, saved-address management and shortcuts to orders, rewards and help.
 - Privacy notices, marketing preference controls and account-data export.
 - Customer account anonymization and session revocation.
+
+The profile, saved-address and search improvements are a local revision pending deployment. Place suggestions use Photon/OpenStreetMap within Hyderabad; if map search is unavailable, clearly labelled supported-area centres remain available. No Google Maps key is required. Saving an address includes a review of the map selection and complete street details.
 
 ## Technology
 
@@ -107,7 +112,9 @@ See [live payments, OTP and messaging setup](docs/LIVE_SERVICES.md) for AWS conf
 
 ## Verification
 
-Local verification on **8 November 2026** passed **196 unit tests, 115 database integration tests and 43 browser scenarios** (37 core, one hosted-checkout fixture and five registration/recovery scenarios), plus TypeScript and the production build.
+The local profile/address/search revision passed **227 unit tests, 128 database integration tests and 55 browser scenarios** (49 core, one hosted-checkout fixture and five registration/recovery scenarios) on **9 November 2026**, plus TypeScript and the production build. The profile was visually checked at 320px, 390px and desktop widths. All eight migrations were applied in isolated test databases. These changes are pending deployment.
+
+The preceding account-access release passed **196 unit tests, 115 database integration tests and 43 browser scenarios** (37 core, one hosted-checkout fixture and five registration/recovery scenarios) on **8 November 2026**, plus TypeScript and the production build.
 
 Commit `27546c0a125688351033ef7ba1439dc950b1565e` is live on Render. Its [CI run 42469869009](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42469869009) passed at **15:43:34 IST on 8 November 2026**, with the same test totals, TypeScript, production build, Docker image build, artifact upload and cleanup. All **seven hosted account-access checks passed again at 11:13:36 IST on 9 November**, covering database health, administrator password login, mobile account navigation, privacy settings, account-help availability, sign-out/session revocation and anonymous access rejection. See [release readiness](docs/RELEASE_READINESS.md) for current and historical evidence.
 
@@ -122,7 +129,7 @@ Commit `27546c0a125688351033ef7ba1439dc950b1565e` is live on Render. Its [CI run
 | `npm run test:performance` | Local throughput and automated checkout smoke tests |
 | `npm run test:soak` | Five-minute sustained local load test |
 
-The earlier menu/authentication release on **8 November 2026** passed **162 unit tests, 107 database tests and 33 browser scenarios** (28 core, one hosted-checkout fixture and four non-demo signup/recovery scenarios), along with TypeScript and the production build. The isolated test databases apply all seven migrations. The checks include the 60-dish menu, nine category filters, email/mobile password login, 15-day sessions, OTP password reset with session revocation, webhook recovery and refund diagnostics. Payment, email and SMS calls in these automated suites were intercepted or mocked; these checks do not establish live provider activation. SMS recovery requires configured messaging; the current AWS SMS account has no approved sender setup.
+The earlier menu/authentication release on **8 November 2026** passed **162 unit tests, 107 database tests and 33 browser scenarios** (28 core, one hosted-checkout fixture and four non-demo signup/recovery scenarios), along with TypeScript and the production build. Those isolated test databases applied the then-current seven migrations. The checks include the 60-dish menu, nine category filters, email/mobile password login, 15-day sessions, OTP password reset with session revocation, webhook recovery and refund diagnostics. Payment, email and SMS calls in these automated suites were intercepted or mocked; these checks do not establish live provider activation. SMS recovery requires configured messaging; the current AWS SMS account has no approved sender setup.
 
 AWS granted SES production access in Mumbai on **8 November**, and the signed-in console reconfirmed production access and a healthy account on **9 November**. Signup recipients no longer need individual SES verification. Receipt of signup/recovery emails after approval, sender-domain setup and inbox placement still need verification. Earlier provider checks confirmed a Razorpay test capture and receipt of an SES test email; the test refund remains pending after a provider HTTP 400 refusal. See [release readiness](docs/RELEASE_READINESS.md) for the remaining provider checks.
 

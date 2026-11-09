@@ -3887,3 +3887,18 @@ tr:last-child td {
     content: none;
   }
 }
+.checkout-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.checkout-detail-field > label {
+  color: #616b55;
+  font-size: 14px;
+  font-weight: 500;
+}
+.checkout-detail-field > small {
+  color: #69715f;
+  font-size: 12px;
+  line-height: 1.5;
+}
