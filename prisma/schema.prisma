@@ -62,6 +62,17 @@ model User {
   loyaltyEntries LoyaltyEntry[]
   cateringRequests CateringRequest[]
   addresses     SavedAddress[]
+  favorites     Favorite[]
+}
+
+model Favorite {
+  userId String
+  itemId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@id([userId, itemId])
+  @@index([itemId])
 }
 
 model SavedAddress {
@@ -139,6 +150,7 @@ model MenuItem {
   cityPrices MenuCityPrice[]
   updatedAt   DateTime @updatedAt
   availability Availability[]
+  favorites Favorite[]
   @@index([active, category])
 }
 
@@ -181,6 +193,7 @@ model Order {
   deliveredAt DateTime?
   subtotalPaise Int @default(0)
   couponCode String?
+  couponFirstOrderOnly Boolean @default(false)
   couponDiscountPaise Int @default(0)
   redeemedPoints Int @default(0)
   gstPaise     Int
@@ -234,6 +247,7 @@ model MenuCityPrice {
 
 model Coupon {
   code String @id
+  version Int @default(0)
   description String
   type String
   value Int

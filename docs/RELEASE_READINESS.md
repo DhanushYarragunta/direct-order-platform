@@ -1,6 +1,14 @@
 # Release readiness — 9 November 2026
 
-## Current login-first release — deployed and verified
+## Customer and restaurant completion update
+
+The update adds persisted favourites and profile navigation, explicit past-order review, saved-contact/address reuse and typed venue search in catering, an administrator coupon manager, kitchen ticket/stock search and an overdue-only view. Phone navigation and the reorder dialog received visual checks. Login-first behavior remains in place.
+
+The ninth additive migration, `20261109160000_customer_completion`, creates favourites, adds coupon edit versions and snapshots/backfills each order's first-order restriction. Coupon changes affect new checkouts; existing monetary amounts and first-order terms remain intact. No production seeding is required. Favourites are exported and erased with account data.
+
+TypeScript, the production build, **233 unit tests** and **133 isolated database integration tests** passed locally. Integration evidence is preserved in `.local/customer-completion-integration.json`. All **65 browser scenarios** passed (59 core, one gateway and five registration/recovery). After the final reorder allergen disclosure, the build/unit checks and all five new customer-completion scenarios passed again. Evidence: `.local/core-verification.json`, `.local/gateway-browser.json`, `.local/registration-browser.json`, `.local/customer-completion-focused.json` and screenshots. The same-URL login navigation test now waits for the actual redirect before typing; its five cases also passed three repeated runs. Deployment verification follows publication. Provider acceptance limits below still apply.
+
+## Preceding login-first release — deployed and verified
 
 Commit **`b8617c55f4f3959fd00127388ccb8516198a6290`** is **Live** in Render deployment **`dep-dboose3l550s73aeov30`**, completed at **2026-11-09T09:13:20.175341Z (14:43:20 IST)** after a manual Render trigger. It supersedes `36cec81`, recorded below. Logs confirmed no pending migrations and successful startup on port `10000`; all eight migrations remain applied. [CI run 42589984250](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42589984250), job **`129069002647`**, succeeded, including the check/build, isolated database/browser verification, gateway and registration fixtures, Docker image build and cleanup. CI evidence is `.local/login-first-ci-verification.json`.
 

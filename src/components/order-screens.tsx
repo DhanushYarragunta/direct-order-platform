@@ -21,6 +21,7 @@ import type { Order } from "@/lib/types";
 import { useApp } from "./provider";
 import { Empty, ErrorNotice, FoodPhoto, Loading } from "./ui";
 import { RewardsWallet } from "./rewards-wallet";
+import { ReorderButton } from "./reorder-button";
 import { GatewayPayment } from "./gateway-payment";
 import { finishCheckoutTiming } from "@/lib/checkout-timing";
 import { preparationExplanation } from "@/lib/preparation-explanation";
@@ -81,8 +82,8 @@ export function OrdersScreen() {
           ) : resource.data?.orders.length ? (
             <div className="orders-list">
               {resource.data.orders.map((order) => (
+                <article className="order-history-entry" key={order.id}>
                 <Link
-                  key={order.id}
                   className="order-summary-card"
                   href={
                     order.status === "PENDING_PAYMENT"
@@ -125,6 +126,8 @@ export function OrdersScreen() {
                     </span>
                   </div>
                 </Link>
+                <div className="order-history-actions"><ReorderButton order={order} /></div>
+                </article>
               ))}
             </div>
           ) : (
@@ -337,6 +340,7 @@ export function OrderScreen({ id }: { id: string }) {
           <ArrowLeft size={17} /> All orders
         </Link>
         <div className="receipt-actions no-print">
+          <ReorderButton order={order} />
           {["PAID", "REFUND_PENDING", "REFUNDED"].includes(order.paymentStatus) && <button
             className="button secondary" disabled={busy || order.receiptReviewRequired} onClick={async () => {
               setBusy(true); setActionError("");

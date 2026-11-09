@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, BriefcaseBusiness, Check, ChevronRight, CircleHelp, Gift, Home, LogOut, Mail, MapPin, Pencil, Phone, Plus, ReceiptText, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { Heart, CalendarHeart, ArrowLeft, ArrowRight, BriefcaseBusiness, Check, ChevronRight, CircleHelp, Gift, Home, LogOut, Mail, MapPin, Pencil, Phone, Plus, ReceiptText, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { request } from "@/lib/client";
 import type { CustomerProfile, SavedAddress } from "@/lib/profile-types";
 import { useApp } from "./provider";
@@ -95,6 +95,10 @@ function ProfileContent({ profile }: { profile: CustomerProfile }) {
           {customer && <Link href="/orders#rewards" aria-label="Deccan rewards"><span><Gift size={23} /></span><strong>Rewards</strong><small>Your points & offers</small></Link>}
           <Link href="/help" aria-label="Help & refunds"><span><CircleHelp size={23} /></span><strong>Help & refunds</strong><small>We're here for you</small></Link>
         </div>
+        {customer && <section className="profile-link-group" aria-labelledby="profile-food-heading"><h2 id="profile-food-heading">Food you love</h2>
+          <Link href="/favourites"><span className="profile-link-icon"><Heart size={20} /></span><span><strong>Favourites</strong><small>{profile.favorites?.length || 0} saved dishes · ready to choose again</small></span><ChevronRight size={18} /></Link>
+          <Link href="/catering"><span className="profile-link-icon"><CalendarHeart size={20} /></span><span><strong>Party orders</strong><small>Plan a gathering & track manager replies</small></span><ChevronRight size={18} /></Link>
+        </section>}
         <section className="profile-link-group" aria-labelledby="profile-account-heading"><h2 id="profile-account-heading">Your account</h2>
           <button type="button" aria-label="Personal details" disabled={!!busy} onClick={openProfileDetails}><span className="profile-link-icon"><UserRound size={20} /></span><span><strong>Personal details</strong><small>{customer ? "Name, mobile number & email" : "View your restaurant account"}</small></span><ChevronRight size={18} /></button>
           <Link href="/privacy" aria-label="Privacy & account"><span className="profile-link-icon"><ShieldCheck size={20} /></span><span><strong>Privacy & account</strong><small>Your information, in your control</small></span><ChevronRight size={18} /></Link>

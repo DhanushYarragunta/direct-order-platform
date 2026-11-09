@@ -16,6 +16,7 @@ export const savedAddressSelect = {
 const profileSelect = {
   id: true, name: true, email: true, phone: true, emailVerifiedAt: true,
   phoneVerifiedAt: true, createdAt: true, role: true,
+  favorites: { select: { itemId: true }, orderBy: { createdAt: "desc" } },
   addresses: { select: savedAddressSelect, orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }, { id: "asc" }] },
 } satisfies Prisma.UserSelect;
 
@@ -31,6 +32,21 @@ export async function customerProfile(userId: string) {
   const profile = await db.user.findFirst({ where: { id: userId, deletedAt: null }, select: profileSelect });
   if (!profile) throw new AppError(401, "This account is no longer available");
   return profile;
+}
+
+export async function setFavorite(userId: string, itemId: string, saved: boolean) {
+  return serializable(async tx => {
+    await lockCustomer(tx, userId);
+    if (saved) {
+      const item = await tx.menuItem.findFirst({ where: { id: itemId, active: true }, select: { id: true } });
+      if (!item) throw new AppError(404, "This dish is no longer on the menu");
+      const existing = await tx.favorite.findUnique({ where: { userId_itemId: { userId, itemId } } });
+      if (!existing && await tx.favorite.count({ where: { userId } }) >= 100)
+        throw new AppError(409, "You can save up to 100 favourites");
+      await tx.favorite.upsert({ where: { userId_itemId: { userId, itemId } }, create: { userId, itemId }, update: {} });
+    } else await tx.favorite.deleteMany({ where: { userId, itemId } });
+    return { itemId, saved };
+  });
 }
 
 export async function updateCustomerProfile(userId: string, input: { name: string; phone: string | null }) {

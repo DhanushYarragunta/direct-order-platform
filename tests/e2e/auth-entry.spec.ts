@@ -40,8 +40,12 @@ test("password login returns to the menu and a valid session survives reload", a
   await expectLogin(page);
   // Exercise a client navigation to the signed-out root before logging in. A
   // previously loaded/prefetched redirect must not strand the next session.
+  // The final URL is the same as the initial URL. Wait for the actual redirect
+  // navigation, otherwise filling can target the form it is about to replace.
+  const redirected = page.waitForEvent("framenavigated", { predicate: frame => frame === page.mainFrame() && new URL(frame.url()).pathname === "/login" });
   await page.getByRole("navigation", { name: "Main navigation", exact: true })
     .getByRole("link", { name: "Our menu", exact: true }).click();
+  await redirected;
   await expectLogin(page);
   await page.getByLabel("Email or mobile number", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);

@@ -187,6 +187,7 @@ export async function checkout(
           cartHash,
           subtotalPaise: priced.totalPaise,
           couponCode: quote.couponCode,
+          couponFirstOrderOnly: quote.couponFirstOrderOnly,
           couponDiscountPaise: quote.couponDiscountPaise,
           redeemedPoints: quote.redeemedPoints,
           totalPaise,
@@ -298,8 +299,7 @@ export async function settlePayment(
             i.id === line.itemId && i.active && i.availability[0]?.available && menuScheduleOpen(i),
         ),
     );
-  const firstCoupon = order.couponCode ? await tx.coupon.findUnique({ where: { code: order.couponCode } }) : null;
-  const welcomeLost = firstCoupon?.firstOrderOnly && !(await firstOrderEligible(tx, order.userId, order.id));
+  const welcomeLost = order.couponFirstOrderOnly && !(await firstOrderEligible(tx, order.userId, order.id));
   if (unavailable || welcomeLost) {
     await releaseRewards(tx, order);
     if (gateway) await queueGatewayRefund(tx, paymentId, welcomeLost

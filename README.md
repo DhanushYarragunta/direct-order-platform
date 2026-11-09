@@ -38,7 +38,11 @@ A multi-outlet restaurant ordering platform that connects customers, kitchen tea
 
 - Role-based access for customers, kitchen staff, managers and administrators.
 - Accessible account navigation and sign-out on phones and tablets, with recoverable privacy-setting loads.
-- A responsive profile with editable name/mobile number, saved-address management and shortcuts to orders, rewards and help.
+- A responsive profile with editable name/mobile number, saved-address management, persisted favourite dishes and shortcuts to orders, rewards, catering and help.
+- Review a previous order against current menu prices, portions, extras and availability before adding selected dishes to the existing cart.
+- Saved recipient details and addresses in party bookings, with typed venue search.
+- An admin coupon manager with schedules, pause/resume, edit conflict detection and preserved terms for pending checkouts.
+- Kitchen ticket and stock search, an overdue filter and clear notices whenever tickets are hidden.
 - Privacy notices, marketing preference controls and account-data export.
 - Customer account anonymization and session revocation.
 

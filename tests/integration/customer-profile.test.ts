@@ -50,7 +50,7 @@ describe.sequential("customer profile and saved address book", () => {
     const response = await getProfile();
     expect(response.status).toBe(200);
     const profile = await response.json();
-    expect(Object.keys(profile).sort()).toEqual(["addresses", "createdAt", "email", "emailVerifiedAt", "id", "name", "phone", "phoneVerifiedAt", "role"]);
+    expect(Object.keys(profile).sort()).toEqual(["addresses", "createdAt", "email", "emailVerifiedAt", "favorites", "id", "name", "phone", "phoneVerifiedAt", "role"]);
     expect(profile.addresses.map((item: { id: string }) => item.id)).toEqual([saved.id]);
     expect(JSON.stringify(profile)).not.toContain(other.email);
     expect(JSON.stringify(profile)).not.toContain("password");

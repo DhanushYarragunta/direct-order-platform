@@ -1,6 +1,6 @@
 # Deployment, privacy and recovery
 
-This repository includes a production Node container, PostgreSQL Compose service, separate order worker, database readiness endpoint, strict script CSP, and a GitHub Actions verification workflow. These are deployable files, not evidence of a completed public deployment. Docker Compose configuration and a Linux ARM64 Docker image build passed locally on 5 November 2026. The deployed services and full container/database runtime still need smoke checks on the chosen host. The workflow also builds the image when pushed to GitHub.
+This repository includes a production Node container, PostgreSQL Compose service, separate order worker, database readiness endpoint, strict script CSP, and a GitHub Actions verification workflow. The hosted demonstration is deployed on Render; commit-specific CI, migration and smoke-check evidence is recorded in [release readiness](RELEASE_READINESS.md). Docker Compose configuration and a Linux ARM64 Docker image build passed locally on 5 November 2026. The separate continuously running worker and production recovery drills still require deployment/acceptance. The workflow also builds the image when pushed to GitHub.
 
 ## Container review environment
 

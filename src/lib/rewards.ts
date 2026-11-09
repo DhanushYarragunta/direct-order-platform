@@ -19,7 +19,7 @@ export async function firstOrderEligible(tx: Prisma.TransactionClient, userId: s
       ...(excludeId ? { id: { not: excludeId } } : {}),
       OR: [
         { paymentStatus: "PAID" },
-        { status: "PENDING_PAYMENT", couponCode: "WELCOME100", expiresAt: { gt: new Date() } },
+        { status: "PENDING_PAYMENT", couponFirstOrderOnly: true, expiresAt: { gt: new Date() } },
       ],
     },
     select: { id: true },
@@ -41,8 +41,8 @@ export async function quoteRewards(
   const eligible = !coupon?.firstOrderOnly || await firstOrderEligible(tx, userId);
   try {
     const base = calculateRewards(subtotalPaise, coupon, balance, 0, eligible);
-    return calculateRewards(subtotalPaise, coupon, balance,
-      useMaximum ? base.maxRedeemablePoints : redeemedPoints, eligible);
+    return { ...calculateRewards(subtotalPaise, coupon, balance,
+      useMaximum ? base.maxRedeemablePoints : redeemedPoints, eligible), couponFirstOrderOnly: !!coupon?.firstOrderOnly };
   } catch (error) {
     throw new AppError(409, (error as Error).message);
   }

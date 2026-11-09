@@ -2,7 +2,17 @@
 
 For local/demo review, open http://127.0.0.1:3000 with `DEMO_MODE=true` and use the Customer, Admin, Manager and outlet Kitchen buttons at `/login`. Separate browser profiles keep sessions independent. On the hosted demonstration, use `judge@deccan.example` with the password supplied privately; the local demo shortcuts are disabled.
 
-The account-access revision, commit `27546c0a125688351033ef7ba1439dc950b1565e`, is live on Render. Local verification on 8 November 2026 passed TypeScript/build, 196 unit tests, 115 integration tests and 43 browser scenarios (37 core, one hosted-checkout fixture and five registration/recovery scenarios). [CI run 42469869009](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42469869009) passed for this commit, including the browser suites and Docker build. Seven hosted account-access checks passed again at **11:13:36 IST on 9 November 2026**. The earlier AI release's 19 checks and visual review of `/workspace/ai` remain historical evidence; see [release readiness](RELEASE_READINESS.md) for each release's scope.
+The account-access revision, commit `27546c0a125688351033ef7ba1439dc950b1565e`, is a historical release superseded by the updates recorded in release readiness. Local verification on 8 November 2026 passed TypeScript/build, 196 unit tests, 115 integration tests and 43 browser scenarios (37 core, one hosted-checkout fixture and five registration/recovery scenarios). [CI run 42469869009](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42469869009) passed for this commit, including the browser suites and Docker build. Seven hosted account-access checks passed again at **11:13:36 IST on 9 November 2026**. The earlier AI release's 19 checks and visual review of `/workspace/ai` remain historical evidence; see [release readiness](RELEASE_READINESS.md) for each release's scope.
+
+## Customer and workspace completion
+
+The 9 November completion update adds these connected flows. The live deployment record and checks are maintained in [release readiness](RELEASE_READINESS.md).
+
+- Save a heart on a menu dish; open **Profile → Favourites**, reload and remove it. Saving never adds to the cart. Prices and availability follow the selected kitchen.
+- Open **My orders → Order again**. Review exact portions/extras at today's prices, deselect dishes, then add to your existing cart. Unavailable portions/extras are explained; no substitutions are made. Checkout still rechecks prices and stock on the server.
+- Open **Party orders** after saving a default address. Recipient, phone and address fill automatically. Select another saved address or search for an event venue, then add its full details. Catering remains subject to the selected manager's confirmation.
+- As Admin, open **Workspace → Coupons**. Create fixed or percentage offers, set IST start/end times, minimum item totals and caps, and edit or pause them. A saved coupon's terms affect new checkouts; existing payment sessions retain their saved discount and first-order restriction. Two different first-order codes cannot be reserved concurrently by one customer.
+- In the kitchen, search by ticket number, dish or note. Use **Overdue only** and **Show all tickets**. Filtered views identify the number of hidden tickets; sound and new-order updates continue using the full queue. Search dishes inside Availability. On phones, use **Workspace menu** for all named staff destinations.
 
 ## Suggested review order
 

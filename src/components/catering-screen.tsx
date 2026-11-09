@@ -27,6 +27,8 @@ import {
   cateringLocalDate,
   CATERING_STATUSES,
 } from "@/lib/catering-validation";
+import { AddressSearch } from "./address-search";
+import { fullDeliveryAddress } from "@/lib/profile-types";
 import type { Outlet } from "@/lib/types";
 import "./catering.css";
 
@@ -200,9 +202,10 @@ function Pagination({
 }
 
 export function CateringScreen() {
+  const app = useApp();
   return (
     <Access staff={false}>
-      <CustomerCatering />
+      <CustomerCatering key={app.user?.id || "guest"} />
     </Access>
   );
 }
@@ -214,8 +217,15 @@ function CustomerCatering() {
     [error, setError] = useState("");
   const [cancel, setCancel] = useState<CateringRequest | null>(null);
   const [eventDate, setEventDate] = useState("");
-  const [outlet, setOutlet] = useState(app.outletId);
+  const [chosenOutlet, setOutlet] = useState<string | null>(null);
+  const outlet = chosenOutlet || app.outletId;
   const [submitted, setSubmitted] = useState("");
+  const [contact, setContact] = useState<{ name?: string; phone?: string; address?: string; addressId?: string }>({});
+  const addresses = app.profile.data?.addresses || [];
+  const savedAddress = contact.addressId === undefined ? addresses.find(address => address.isDefault) : addresses.find(address => address.id === contact.addressId);
+  const contactName = contact.name ?? savedAddress?.recipientName ?? app.profile.data?.name ?? app.user?.name ?? "";
+  const contactPhone = contact.phone ?? savedAddress?.phone ?? app.profile.data?.phone ?? "";
+  const eventAddress = contact.address ?? (savedAddress ? fullDeliveryAddress(savedAddress) : "");
   const idempotency = useRef({ payload: "", key: "" });
   const r = useResource<CateringData>(`/api/catering?page=${page}`);
   useEffect(() => {
@@ -265,6 +275,7 @@ function CustomerCatering() {
       );
       app.setToast("Your party request has been sent");
       form.reset();
+      setContact({});
       idempotency.current = { payload: "", key: "" };
       if (page === 1) await r.refresh();
       else setPage(1);
@@ -396,12 +407,21 @@ function CustomerCatering() {
               placeholder="For the whole party"
             />
           </label>
+          {app.profile.error && <ErrorNotice message="Saved details could not be loaded. Enter them below or try again." retry={app.profile.refresh} />}
+          {!!addresses.length && <label>Use a saved address
+            <select value={savedAddress?.id || ""} onChange={event => {
+              const address = addresses.find(item => item.id === event.target.value);
+              setContact(address ? { addressId: address.id, name: address.recipientName, phone: address.phone, address: fullDeliveryAddress(address) }
+                : { name: contactName, phone: contactPhone, addressId: "", address: "" });
+            }}><option value="">A different event venue</option>{addresses.map(address => <option key={address.id} value={address.id}>{address.label} · {address.area}</option>)}</select>
+          </label>}
           <div className="catering-form-row">
             <label>
               Contact name
               <input
                 name="contactName"
-                defaultValue={app.user?.name}
+                value={contactName}
+                onChange={event => setContact(value => ({ ...value, name: event.target.value }))}
                 required
                 minLength={2}
                 maxLength={70}
@@ -412,6 +432,8 @@ function CustomerCatering() {
               Mobile number
               <input
                 name="phone"
+                value={contactPhone}
+                onChange={event => setContact(value => ({ ...value, phone: event.target.value }))}
                 type="tel"
                 inputMode="numeric"
                 pattern="[6-9][0-9]{9}"
@@ -422,10 +444,13 @@ function CustomerCatering() {
               />
             </label>
           </div>
+          <AddressSearch label="Search event location" onSelect={place => setContact(value => ({ ...value, addressId: "", address: place.address }))} />
           <label>
             Event address
             <textarea
               name="address"
+              value={eventAddress}
+              onChange={event => setContact(value => ({ ...value, address: event.target.value }))}
               required
               minLength={8}
               maxLength={300}

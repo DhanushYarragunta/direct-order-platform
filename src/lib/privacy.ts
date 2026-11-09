@@ -28,7 +28,7 @@ export async function updateMarketing(userId: string, marketingOptIn: boolean) {
 }
 
 export async function exportAccount(userId: string) {
-  const [profile, orders, catering, loyalty, consentHistory, addresses] = await db.$transaction([
+  const [profile, orders, catering, loyalty, consentHistory, addresses, favorites] = await db.$transaction([
     db.user.findUniqueOrThrow({ where: { id: userId }, select: {
       id: true, name: true, email: true, phone: true, emailVerifiedAt: true, phoneVerifiedAt: true, role: true, createdAt: true, consentAt: true, marketingOptIn: true,
     } }),
@@ -38,13 +38,14 @@ export async function exportAccount(userId: string) {
     db.audit.findMany({ where: { actorId: userId, action: { in: ["MARKETING_OPTED_IN", "MARKETING_WITHDRAWN"] } },
       select: { action: true, createdAt: true, detail: true }, orderBy: { createdAt: "asc" } }),
     db.savedAddress.findMany({ where: { userId }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] }),
+    db.favorite.findMany({ where: { userId }, select: { itemId: true, createdAt: true }, orderBy: { createdAt: "asc" } }),
   ]);
   return { exportedAt: new Date().toISOString(), profile,
     orders: orders.map(({ checkoutKey: _key, cartHash: _hash, ...order }) => ({ ...order,
       payments: order.payments.map(({ attemptKey: _attempt, ...payment }) => payment),
     })),
     catering: catering.map(({ requestKey: _key, requestHash: _hash, ...request }) => request),
-    loyalty, consentHistory, addresses,
+    loyalty, consentHistory, addresses, favorites,
   };
 }
 
@@ -79,6 +80,7 @@ export async function deleteAccount(user: AuthUser) {
     } });
     await tx.loyaltyEntry.deleteMany({ where: { userId: user.id } });
     await tx.savedAddress.deleteMany({ where: { userId: user.id } });
+    await tx.favorite.deleteMany({ where: { userId: user.id } });
     await tx.session.deleteMany({ where: { userId: user.id } });
     await tx.passwordReset.deleteMany({ where: { userId: user.id } });
     if (profile.phone) await tx.phoneOtp.deleteMany({ where: { phone: profile.phone } });

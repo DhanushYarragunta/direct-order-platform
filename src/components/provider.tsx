@@ -12,6 +12,7 @@ import { cartLineKey, type CartLine } from "@/lib/domain";
 import { request, useResource } from "@/lib/client";
 import type { MenuData, User } from "@/lib/types";
 import { useDeliveryProfile } from "./use-delivery-profile";
+import { mergeReorder } from "@/lib/reorder";
 import {
   CART_STORAGE_KEY, CHECKOUT_STORAGE_KEY, CART_CONSUME_LOCK, cartSnapshotSchema,
   pendingCheckoutsSchema, cartAfterEdit, cartAfterPayment, type CartSnapshot, type PendingCheckout,
@@ -191,6 +192,13 @@ function useStore(demoMode: boolean) {
     );
   });
   const deliveryProfile = useDeliveryProfile(user, authReady, menu.data?.outlets, setOutletId, setToast);
+  function addReviewedLines(lines: CartLine[]) {
+    const current = cartStateRef.current;
+    if (!menu.data || menu.loading || menu.error || menu.data.outlet.id !== current.outletId)
+      throw new Error("The selected kitchen changed. Wait for its menu and review your choices again.");
+    saveCart(cartAfterEdit(current, { outletId: current.outletId, cart: mergeReorder(current.cart, lines, menu.data) }));
+    setToast("Selected dishes added. Review your order before paying.");
+  }
   return {
     ...deliveryProfile,
     user,
@@ -205,6 +213,7 @@ function useStore(demoMode: boolean) {
     rememberCheckout,
     consumeCheckout,
     add,
+    addReviewedLines,
     quantity,
     total,
     unavailable,

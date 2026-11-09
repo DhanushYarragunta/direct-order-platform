@@ -3902,3 +3902,23 @@ tr:last-child td {
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* Narrow staff screens keep the two service shortcuts; the workspace menu
+   exposes all named destinations without squeezing labels into fragments. */
+@media (max-width: 760px) {
+  .staff-shell .sidebar nav { flex: 0 0 auto; gap: 8px; margin-left: auto; }
+  .staff-shell .sidebar .nav-link { width: 44px; min-width: 44px; min-height: 44px; padding: 0; font-size: 0; justify-content: center; }
+  .staff-shell .sidebar .nav-link svg { display: block; width: 20px; height: 20px; }
+  .staff-shell .sidebar .nav-link:nth-child(n+3) { display: none; }
+}
+
+@media (max-width: 800px) {
+  .sidebar .nav-link-label { display: none; }
+  .sidebar .nav-link svg { display: block; flex-shrink: 0; }
+}
+@media (max-width: 650px) {
+  .sidebar .brand { flex-shrink: 0; }
+  .sidebar nav { min-width: 0; }
+  .sidebar .nav-link { flex-shrink: 0; }
+  .app-shell:not(.staff-shell) .sidebar .nav-link[href="/favourites"] { display: none; }
+}

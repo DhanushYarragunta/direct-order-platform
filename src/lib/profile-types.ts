@@ -38,6 +38,7 @@ export type CustomerProfile = {
   createdAt: string;
   role: User["role"];
   addresses: SavedAddress[];
+  favorites?: { itemId: string }[];
 };
 export type DeliverySelection = {
   addressId?: string;

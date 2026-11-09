@@ -16,6 +16,8 @@ import type { MenuItem } from "@/lib/types";
 import { useApp } from "./provider";
 import { Cart } from "./cart";
 import { FoodSearch } from "./food-search";
+import { FavoriteButton } from "./favorite-button";
+import Link from "next/link";
 import { normalizeMenuQuery, searchMenu } from "@/lib/menu-search";
 import "./menu-depth.css";
 import "./customer-quality.css";
@@ -29,7 +31,7 @@ import {
   Stepper,
 } from "./ui";
 
-export function MenuScreen() {
+export function MenuScreen({ favoritesOnly = false }: { favoritesOnly?: boolean }) {
   const app = useApp(),
     { data, error, loading, refresh } = app.menu;
   const [query, setQuery] = useState(""),
@@ -40,7 +42,8 @@ export function MenuScreen() {
     [extras, setExtras] = useState<string[]>([]),
     [quantity, setQuantity] = useState(1);
   const searching = !!normalizeMenuQuery(query);
-  const items = searchMenu(data?.items || [], query).filter(item =>
+  const menuItems = (data?.items || []).filter(item => !favoritesOnly || app.profile.data?.favorites?.some(saved => saved.itemId === item.id));
+  const items = searchMenu(menuItems, query).filter(item =>
     (category === "All dishes" || item.category === category) && (!veg || item.vegetarian));
   function changeQuery(value: string) {
     setQuery(value);
@@ -65,8 +68,8 @@ export function MenuScreen() {
       <div className="page-intro">
         <div>
           <p className="eyebrow">FROM HYDERABAD, WITH LOVE</p>
-          <h1>Something delicious awaits.</h1>
-          <p>Slow-cooked traditions. Fresh from your neighbourhood kitchen.</p>
+          <h1>{favoritesOnly ? "Your favourites, made fresh." : "Something delicious awaits."}</h1>
+          <p>{favoritesOnly ? "Your saved dishes, with today’s prices and availability at your selected kitchen." : "Slow-cooked traditions. Fresh from your neighbourhood kitchen."}</p>
         </div>
         <div className="kitchen-picker">
           <MapPin size={19} />
@@ -102,11 +105,11 @@ export function MenuScreen() {
           </button>
         </div>
       </div>
-      <FoodSearch query={query} onChange={changeQuery} items={data?.items || []}
+      <FoodSearch query={query} onChange={changeQuery} items={menuItems}
         onCategoryChange={value => { setQuery(value); setCategory(value); }}
         vegetarian={veg} onVegetarianChange={setVeg} resultCount={items.length}
         onSubmit={() => document.getElementById("menu")?.scrollIntoView({ block: "start", behavior: "smooth" })} />
-      {!searching && <section className="hero">
+      {!searching && !favoritesOnly && <section className="hero">
         <div className="hero-copy">
           <span className="hero-kicker">
             <span /> THE HOUSE SPECIAL
@@ -146,7 +149,7 @@ export function MenuScreen() {
       </section>}
       <div className="menu-layout">
         <section className="menu-content" id="menu">
-          {!searching && !!suggestions.length && <section className="reorder-section" aria-label="Order again suggestions">
+          {!searching && !favoritesOnly && !!suggestions.length && <section className="reorder-section" aria-label="Order again suggestions">
             <div className="section-heading"><div><h2>Your usual, made fresh.</h2><p>Favourites from your recent orders at {data?.outlet.name}. Choose a dish to review portions and extras.</p></div></div>
             <div className="reorder-items">
               {suggestions.map((item) => <div className="reorder-item" key={item.id}>
@@ -159,9 +162,9 @@ export function MenuScreen() {
             <div>
               <p className="eyebrow">{searching ? "FIND YOUR FAVOURITE" : "MADE FRESH, EVERY DAY"}</p>
               <h2>
-                {searching ? "Search results" : "Explore our menu"}{" "}
+                {searching ? "Search results" : favoritesOnly ? "Saved dishes" : "Explore our menu"}{" "}
                 <span className="count-label">
-                  {searching ? items.length : data?.items.length || 0} dishes
+                  {searching ? items.length : menuItems.length} {(searching ? items.length : menuItems.length) === 1 ? "dish" : "dishes"}
                 </span>
               </h2>
             </div>
@@ -177,12 +180,13 @@ export function MenuScreen() {
                 onClick={() => { setCategory(c); setQuery(""); }}
               >
                 {c === "All dishes" && <UtensilsCrossed size={15} />} {c}
-                <span className="category-count" aria-hidden="true">{c === "All dishes" ? data?.items.length || 0 : data?.items.filter(item => item.category === c).length || 0}</span>
+                <span className="category-count" aria-hidden="true">{c === "All dishes" ? menuItems.length : menuItems.filter(item => item.category === c).length || 0}</span>
               </button>
             ))}
           </div>
+          {favoritesOnly && app.profile.error && <ErrorNotice message={app.profile.error} retry={app.profile.refresh} />}
           {error && <ErrorNotice message={error} retry={refresh} />}{" "}
-          {loading ? (
+          {loading || (favoritesOnly && !app.profile.data && !app.profile.error) ? (
             <Loading />
           ) : items.length ? (
             <div className="menu-groups">
@@ -196,6 +200,7 @@ export function MenuScreen() {
                 >
                   <div className="dish-image">
                     <FoodPhoto src={item.photo} name={item.name} loading="lazy" />
+                    <FavoriteButton itemId={item.id} name={item.name} />
                     {item.featured && (
                       <span className="dish-badge">
                         <Flame size={12} /> House favourite
@@ -243,9 +248,10 @@ export function MenuScreen() {
               </section>)}
             </div>
           ) : (
-            !error && (
-              <Empty title="No dishes found">
-                <p>{searching ? `We couldn’t find a match for “${query.trim()}”${veg ? " with Veg only selected" : ""}. Try a dish, ingredient or category.` : "Try another category or turn off Veg only."}</p>
+            !error && !(favoritesOnly && app.profile.error) && (
+              <Empty title={favoritesOnly && !query && category === "All dishes" && !veg ? "Save a dish you love" : "No dishes found"}>
+                {favoritesOnly && <p>Tap the heart on a dish in the menu. Saved dishes appear here when they are on the current kitchen’s menu.</p>}
+                {(!favoritesOnly || query || category !== "All dishes" || veg) && <><p>{searching ? `We couldn’t find a match for “${query.trim()}”${veg ? " with Veg only selected" : ""}. Try a dish, ingredient or category.` : "Try another category or turn off Veg only."}</p>
                 <button
                   className="button secondary"
                   onClick={() => {
@@ -255,7 +261,8 @@ export function MenuScreen() {
                   }}
                 >
                   Show all dishes
-                </button>
+                </button></>}
+                {favoritesOnly && <Link className="button primary" href="/">Explore our menu</Link>}
               </Empty>
             )
           )}

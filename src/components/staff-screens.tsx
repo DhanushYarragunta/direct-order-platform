@@ -23,6 +23,7 @@ import { AnalyticsScreen } from "./analytics-screen";
 import { useKitchenTablet } from "./kitchen-tablet";
 import { kitchenUrgency } from "@/lib/kitchen-display";
 import "./kitchen-quality.css";
+import "./customer-completion.css";
 
 type StaffData = { outlet: Outlet; outlets: Outlet[]; orders: Order[] };
 export function StaffGate({
@@ -122,6 +123,9 @@ function Kitchen() {
     [busy, setBusy] = useState<string | null>(null),
     [error, setError] = useState(""),
     [stockOpen, setStockOpen] = useState(false),
+    [query, setQuery] = useState(""),
+    [lateOnly, setLateOnly] = useState(false),
+    [stockQuery, setStockQuery] = useState(""),
     [override, setOverride] = useState<Order | null>(null);
   const tablet = useKitchenTablet(r.outletId, r.data?.outlet.id === r.outletId ? r.data.orders : undefined);
   const stock = useResource<MenuData>(
@@ -170,9 +174,11 @@ function Kitchen() {
       { status: "HANDED_OFF", label: "Awaiting dispatch", next: "OUT_FOR_DELIVERY", action: "Mark out for delivery" },
       { status: "OUT_FOR_DELIVERY", label: "Out for delivery", next: "DELIVERED", action: "Confirm delivered" },
     ],
-    orders = r.data?.orders || [],
+    allOrders = (r.data?.outlet.id === r.outletId ? r.data.orders : []).filter(order => columns.some(column => column.status === order.status) && !(order.status === "HANDED_OFF" && order.fulfillment === "pickup")),
+    orders = allOrders.filter(order => (!lateOnly || kitchenUrgency(order.status, order.promisedAt, now).tone === "late")
+      && `${order.number} ${order.note} ${order.lines.map(line => line.name).join(" ")}`.toLowerCase().includes(query.toLowerCase().trim())),
     visibleColumns = columns.filter((column) => !["HANDED_OFF", "OUT_FOR_DELIVERY"].includes(column.status)
-      || orders.some((order) => order.fulfillment === "delivery" && order.status === column.status));
+      || allOrders.some((order) => order.fulfillment === "delivery" && order.status === column.status));
   return (
     <div className="page kitchen-page">
       <div className="page-intro">
@@ -234,6 +240,11 @@ function Kitchen() {
           <TriangleAlert size={24} /> {r.connection === "offline" ? "Offline — showing the last saved tickets. Actions are paused until the connection returns." : "Reconnecting — tickets may be out of date. Check the last synced time before taking action."}
         </div>
       )}
+      <div className="kitchen-search-row"><label>Find a kitchen ticket<input type="search" value={query} onChange={event => setQuery(event.target.value)} maxLength={100} placeholder="Order number, dish or note" /></label>
+        <button className="button secondary" aria-pressed={lateOnly} onClick={() => setLateOnly(value => !value)}>Overdue only ({allOrders.filter(order => kitchenUrgency(order.status, order.promisedAt, now).tone === "late").length})</button>
+        {(query || lateOnly) && <button className="button secondary" onClick={() => { setQuery(""); setLateOnly(false); }}>Show all tickets</button>}
+      </div>
+      {(query || lateOnly) && <p className="kitchen-filter-note" role="status">Filtered view · Showing {orders.length} of {allOrders.length} active tickets. Clear filters to see every order.</p>}
       <p className="kitchen-legend"><span>Green · On time</span><span>Amber · Due within 5 minutes</span><span>Red · Overdue</span></p>
       {(r.error || error) && (
         <ErrorNotice message={error || r.error} retry={r.refresh} />
@@ -354,12 +365,12 @@ function Kitchen() {
                     <div className="empty-column">
                       <CheckCircle />
                       <h3>
-                        {column.status === "PLACED"
+                        {query || lateOnly ? "No matching tickets" : column.status === "PLACED"
                           ? "All caught up"
                           : "No orders here yet"}
                       </h3>
                       <p>
-                        {column.status === "PLACED"
+                        {query || lateOnly ? "Clear filters to see all tickets in this stage." : column.status === "PLACED"
                           ? "New paid orders arrive automatically."
                           : "Tickets move here as preparation progresses."}
                       </p>
@@ -377,11 +388,13 @@ function Kitchen() {
         title="Kitchen availability"
         description={`Changes apply to ${r.data?.outlet.name || r.outletId} and update the customer menu.`}
       >
+        <label>Search kitchen availability<input type="search" value={stockQuery} onChange={event => setStockQuery(event.target.value)} maxLength={100} /></label>
         {stock.loading && <Loading />}
         {stock.error && (
           <ErrorNotice message={stock.error} retry={stock.refresh} />
         )}{" "}
-        {stock.data?.items.map((item) => (
+        {stock.data && !stock.data.items.some(item => item.name.toLowerCase().includes(stockQuery.toLowerCase().trim())) && <p>No dishes match this search.</p>}
+        {stock.data?.items.filter(item => item.name.toLowerCase().includes(stockQuery.toLowerCase().trim())).map((item) => (
           <div className="stock-row" key={item.id}>
             <Diet veg={item.vegetarian} />
             <div>

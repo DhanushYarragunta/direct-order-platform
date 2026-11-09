@@ -20,6 +20,8 @@ import {
   CircleHelp,
   UserRound,
   Menu,
+  Heart,
+  TicketPercent,
 } from "lucide-react";
 import { useApp } from "./provider";
 import { request } from "@/lib/client";
@@ -61,6 +63,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           : []),
         ...(app.user?.role === "ADMIN"
           ? [{ href: "/workspace/menu", label: "Menu manager", icon: BookOpen },
+             { href: "/workspace/coupons", label: "Coupons", icon: TicketPercent },
              { href: "/workspace/services", label: "Services", icon: Settings }]
           : []),
         ...(["ADMIN", "MANAGER"].includes(app.user?.role || "")
@@ -71,10 +74,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
     : [
         { href: "/", label: "Our menu", icon: UtensilsCrossed },
         { href: "/orders", label: "My orders", icon: ReceiptText },
+        { href: "/favourites", label: "Favourites", icon: Heart },
         { href: "/catering", label: "Party orders", icon: CalendarHeart },
       ];
   return (
-    <div className={`app-shell ${path === "/kitchen" ? "kitchen-shell" : ""}`}>
+    <div className={`app-shell ${staff ? "staff-shell" : ""} ${path === "/kitchen" ? "kitchen-shell" : ""}`}>
       <aside className="sidebar">
         <Link href="/" className="brand">
           <span className="brand-mark">
@@ -99,7 +103,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               className={`nav-link ${path === href ? "active" : ""}`}
             >
               <Icon size={19} />
-              {label}
+              <span className="nav-link-label">{label}</span>
               {path === href && <span className="nav-dot" />}
             </Link>
           ))}
@@ -165,6 +169,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         ? "AI & automation"
                       : path.includes("workspace/services")
                         ? "Payments & communications"
+                      : path === "/workspace/coupons"
+                        ? "Coupons"
+                      : path === "/favourites"
+                        ? "Favourites"
                       : path.includes("workspace/menu")
                         ? "Menu manager"
                         : path.includes("catering")
