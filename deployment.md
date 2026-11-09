@@ -1,90 +1,156 @@
-# Deployment and local setup
+# Deccan Kitchen & Co. - Deployment Guide
 
-## Current state
+GitHub: https://github.com/DhanushYarragunta/direct-order-platform
+Live application: https://direct-order-platform.onrender.com
+Author: Dhanush Yarragunta
+Date: 9 November 2026
+Reviewed release: `baca6cfcb68e065e57397d5dc129e747384b5826`
 
-Project repository: https://github.com/DhanushYarragunta/direct-order-platform
+## 1. Reviewer login
 
-The account-access revision, commit `27546c0a125688351033ef7ba1439dc950b1565e`, is live in Render deployment `dep-dbo4iffavr4c73b1erhg`. Local verification on 8 November 2026 passed TypeScript, the production build, 196 unit tests, 115 integration tests and 43 browser scenarios. [CI run 42469869009](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42469869009) passed for that exact commit, including the database/browser suites and Docker build. Seven hosted checks passed again at **11:13:36 IST on 9 November 2026**, covering health, management sign-in, mobile account navigation, privacy loading, account help, sign-out and access rejection. These checks do not establish signup or recovery email receipt. See [release readiness](docs/RELEASE_READINESS.md) for deployment, CI and provider evidence.
+Open the live application and sign in with the assessment account:
 
-Follow `docs/RENDER.md` for upgrades and controlled staging; the root `render.yaml` retains safe public-demo settings. Check the actual GitHub Actions result and deployed commit for each service when publishing later changes.
+- Email: `judge@deccan.example`
+- Password: `Supplied only in the private reviewer ZIP`
+- Role: Administrator
 
-## Local steps
+The password is supplied separately in the private submission ZIP. Provider credentials and infrastructure secrets are stored separately in the hosting environment.
 
-1. Install Node 22.12 or later and PostgreSQL 16. Google Chrome is used for local browser verification on macOS.
-2. In the project directory, run `npm install`. If npm requests setup-script approval, run `npm install-scripts ls`, approve the installed Prisma, Prisma engine, and esbuild packages, then run `npm rebuild`.
-3. Run `npm run db:local`. This creates an isolated local cluster on loopback port 55432, a database, and an ignored `.env`. The helper uses the Homebrew ARM PostgreSQL path unless `POSTGRES_BIN` is supplied.
-4. Run `npm run db:generate`, `npm run db:migrate`, and `npm run db:seed`.
-5. Run `npm run dev` and visit `http://127.0.0.1:3000`. Do not interchange localhost and 127.0.0.1 without updating the application origin.
-6. Run `npm run verify:core` before committing the review candidate. It includes integration tests in a separate temporary database, browser checks, and saved desktop/mobile screenshots. It starts a temporary server on port 3001 and shuts it down after the run.
-7. Optionally run `npm run test:performance` after the production build. It creates its own temporary database and server on port 3001, offers 30 orders over 90 seconds with three live kitchen screens, and times five automated mobile checkout flows. See `docs/PERFORMANCE.md` for scope and evidence. Do not run it simultaneously with browser verification because both use port 3001.
+The administrator workspace provides access to the menu, coupons, catering requests, kitchen screens, reports and preparation-time demonstrations.
 
-For an existing PostgreSQL instance, copy `.env.example` to `.env` and supply your own values instead of using `db:local`. The seed preserves existing records, except it upgrades the exact old FSSAI text placeholder and untouched inactive haleem demo row. Repeated seeding does not change demo passwords or reset sample order times.
-
-## Environment variable names
-
-| Name | Purpose |
+| Screen | Path |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL connection used by Prisma and its PostgreSQL adapter |
-| `APP_ORIGIN` | Exact permitted web origin, including protocol and port |
-| `DEMO_MODE` | Enables explicit demo-account shortcuts and the simulated payment gateway |
-| `DEMO_PASSWORD` | Password used when the seed creates demo users; kept outside Git |
-| `POSTGRES_BIN` | Optional PostgreSQL binary-directory override for the local helper |
-| `PORT` | Optional production Next.js listening port |
+| Dashboard and reporting | /workspace |
+| Central menu management | /workspace/menu |
+| Kitchen display | /kitchen |
+| Preparation-time AI | /workspace/ai |
+| Coupon management | /workspace/coupons |
+| Party bookings | /workspace/catering |
 
-The test runner sets its own temporary database and app origin. `CORE_TEST_DATABASE` and `CORE_INTEGRATION` are internal test safeguards, not deployment variables.
+For the full customer-to-kitchen walkthrough, use the separate local demo roles described below. The hosted payment flow uses Razorpay test checkout. Separate hosted customer and kitchen reviewer accounts have not yet been verified; this guide does not claim a completed live two-role walkthrough.
 
-## Local/demo access for a reviewer
+### Live reviewer notes
 
-The accounts below are seeded for local/demo review with `DEMO_MODE=true`; open `/login` and choose a labelled role. They are not the hosted login credentials. The hosted judges account is `judge@deccan.example`, with the password supplied privately; shared demo shortcuts remain disabled there. Normal sign-in uses email/mobile plus password. OTP is limited to signup, password recovery and contact verification.
+The first request may take about a minute if Render has put the service to sleep. Wait for the login page before retrying. Use separate browser profiles for separate accounts; two private windows may share the same private session.
 
-| Account | Access |
+For Razorpay test-mode card checkout use Visa `4100 2800 0000 1007`, any future expiry and a random CVV. Select Success on the mock bank page, or enter an arbitrary 4-10 digit OTP if the test page requests one. Use only test mode; do not enter a real card. Razorpay's legacy UPI test flow documents `success@razorpay` and `failure@razorpay`; availability depends on the checkout integration, so use the card route if UPI is not offered. Official card reference: https://github.com/razorpay/markdown-docs/blob/master/payments/payments/test-card-details.md
+
+The administrator is a dedicated demonstration account. Keep the reviewer ZIP private. After review, rotate its password and revoke its sessions; apply the same process to any additional reviewer accounts. Provider keys are not included.
+
+## 2. Local setup with Docker Compose (recommended)
+
+Start Docker Desktop or a Docker Engine with Compose. In a fresh checkout:
+
+```sh
+git clone https://github.com/DhanushYarragunta/direct-order-platform.git
+cd direct-order-platform
+git checkout baca6cfcb68e065e57397d5dc129e747384b5826
+```
+
+Create an ignored `.env` file with the following values. Replace both password placeholders with different random URL-safe strings (letters and numbers, at least 24 characters). Do not overwrite an existing deployment's `.env`.
+
+```dotenv
+POSTGRES_PASSWORD=REPLACE_WITH_RANDOM_DATABASE_PASSWORD
+DEMO_PASSWORD=REPLACE_WITH_RANDOM_DEMO_PASSWORD
+APP_ORIGIN=http://127.0.0.1:3000
+DEMO_MODE=true
+ALLOW_PUBLIC_DEMO=false
+PAYMENT_PROVIDER=demo
+EMAIL_PROVIDER=disabled
+SMS_PROVIDER=disabled
+TRANSACTIONAL_EMAIL_ENABLED=false
+TRANSACTIONAL_SMS_ENABLED=false
+```
+
+```sh
+docker compose up --build -d
+docker compose exec web node --import tsx prisma/seed.ts
+```
+
+Open http://127.0.0.1:3000. Compose starts PostgreSQL, migrations, the app and the worker; the second command adds the sample catalogue and demo accounts. Use `docker compose logs web` to inspect startup and `docker compose down` to stop while retaining database data. The CI Docker build passed. Compose startup was not rerun during the submission check because the local Docker daemon was stopped.
+
+### Alternative: Node and PostgreSQL
+
+Install Node.js 22.12 or later, npm and PostgreSQL 16.
+
+```sh
+git clone https://github.com/DhanushYarragunta/direct-order-platform.git
+cd direct-order-platform
+git checkout baca6cfcb68e065e57397d5dc129e747384b5826
+npm ci
+npm run db:local
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+Open http://127.0.0.1:3000.
+
+The database helper creates a local project database on port 55432 and an ignored `.env` file. On macOS it uses the Homebrew PostgreSQL installation. Set POSTGRES_BIN if the PostgreSQL binaries are in another directory.
+
+For an existing PostgreSQL instance or another operating system, copy `.env.example` to `.env`, configure your database connection, application origin and demo settings, and continue from `npm run db:generate`. The seed creates sample dishes, outlets, orders, rewards and catering requests.
+
+The checkout command selects the same revision as the reviewed live application. Use `git checkout main` to return to the latest main branch.
+
+## 3. Demo roles and walkthrough
+
+In local demo mode, the login screen has Customer, Admin and Manager buttons and a Kitchen staff outlet selector. These shortcuts provide access without an email or SMS code. DEMO_PASSWORD controls the password used when the seed creates the local sample accounts.
+
+Use two browser profiles or a normal and private window:
+
+1. Select Customer in the first window. Choose Kondapur, add a dish, review portions and extras, and proceed to checkout.
+2. Enter sample recipient details, choose pickup and complete a successful simulated payment.
+3. Select Kitchen staff - Kondapur in the second window. Find the new ticket and move it through Preparing, Ready and Handoff.
+4. Return to the customer window to see the updated order status.
+5. Use Admin to edit a menu item, change availability or manage a coupon.
+6. Open the AI workspace and compare normal, busy and limited-history scenarios. Review the preparation estimate, fallback and manager override.
+
+Stop the app with Ctrl+C. Run `npm run db:stop` to stop the local project database.
+
+## 4. Verification commands
+
+```sh
+npm run check
+npm run verify:core
+npm run test:gateway-ui
+npm run test:registration-ui
+```
+
+Install the browser runtime if needed with `npx playwright install chromium`. Browser checks use port 3001 and isolated test databases. Run the suites one at a time.
+
+The submitted release passed 236 unit tests, 133 database integration tests, TypeScript, the production build and CI browser/Docker checks. A further 23 checks passed against the hosted application. Release evidence is recorded in `docs/RELEASE_READINESS.md`.
+
+## 5. Deployment
+
+Render builds the Dockerfile from the repository's main branch. The service starts with `node scripts/start-render.mjs`, which applies Prisma migrations and then starts the application. PostgreSQL 16 stores the shared application data. Background jobs handle payment reconciliation, expiry and order updates.
+
+Health check: `/api/health`.
+
+For a production build locally:
+
+```sh
+npm run build
+npm start
+```
+
+A separate worker can be started with `npm run worker`. The repository also includes Docker Compose, a Render Blueprint and deployment documentation under `docs/`.
+
+## 6. Environment variables
+
+Names are listed below. Configure their values in the local `.env` file or hosting environment.
+
+| Purpose | Variables |
 | --- | --- |
-| Customer / `customer@deccan.example` | Ordering, coupons/loyalty, own history/tracking and party requests |
-| Admin / `admin@deccan.example` | Central menu manager, city prices/schedules, all outlet operations/reports and party confirmations |
-| Manager / `manager@deccan.example` | Kondapur reports, kitchen/promise overrides and party confirmations |
-| Kondapur kitchen / `kondapur@deccan.example` | Kondapur kitchen tickets and availability |
-| Gachibowli kitchen / `gachibowli@deccan.example` | Gachibowli kitchen tickets and availability |
-| Kukatpally kitchen / `kukatpally@deccan.example` | Kukatpally kitchen tickets and availability |
+| Application and database | DATABASE_URL, APP_ORIGIN, NODE_ENV, PORT |
+| Demo accounts and local database | DEMO_MODE, DEMO_PASSWORD, ALLOW_PUBLIC_DEMO, POSTGRES_BIN |
+| File storage and contact details | UPLOAD_DIR, PRIVACY_CONTACT, SUPPORT_EMAIL |
+| Background jobs | RUN_BACKGROUND_JOBS |
+| Payments | PAYMENT_PROVIDER, ALLOW_PUBLIC_TEST_PAYMENTS, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET |
+| Email | EMAIL_PROVIDER, EMAIL_FROM, TRANSACTIONAL_EMAIL_ENABLED, RESEND_API_KEY |
+| AWS access | AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN |
+| SMS | SMS_PROVIDER, TRANSACTIONAL_SMS_ENABLED, AWS_SMS_ROUTE, AWS_SMS_MAX_PRICE_USD, AWS_SMS_OTP_TEMPLATE, AWS_SMS_UPDATE_TEMPLATE |
+| Registered SMS sender | AWS_SMS_ORIGINATION_IDENTITY, AWS_SMS_ENTITY_ID, AWS_SMS_OTP_TEMPLATE_ID, AWS_SMS_UPDATE_TEMPLATE_ID |
+| Optional Twilio adapter | TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID, TWILIO_MESSAGING_SERVICE_SID |
 
-Use separate browser profiles or an incognito window to review customer and staff flows simultaneously. A browser profile has one current account. The demo is intentionally accessible when enabled; do not use these shortcuts as production access control.
-
-## AI demonstration configuration
-
-The synthetic preparation model and `/workspace/ai` use existing configuration: either `DEMO_MODE=true`, or all of `ALLOW_PUBLIC_TEST_PAYMENTS=true`, `PAYMENT_PROVIDER=razorpay` and a Razorpay test key. No external model service, new credential, migration or training seed is required. Existing public-test authentication remains unchanged; the AI page requires ADMIN or MANAGER, with outlet scope enforced.
-
-The 300 synthetic training examples stay in memory. Scenario evaluation reads the current queue and returns preview-only estimates and messages; it creates no orders, sends/saves no messages and changes no cloud or provider settings. Real estimates retain the separate live-history gate. Actual late notifications depend on a running host/worker and configured delivery providers; free hosting can pause background work while asleep.
-
-The production build and local suites have passed; exact totals are recorded in `docs/RELEASE_READINESS.md`. To reproduce them, run the existing isolated integration/browser suites with port 3001 free. The current deployment corrects browser-test synchronization; all 33 core scenarios passed again locally. Its 19 hosted checks passed; CI also passed for the exact deployed commit.
-
-## Hosting and release verification
-
-Use a long-running Node server with a managed PostgreSQL database. Install the locked dependencies with `npm ci`, generate Prisma, apply migrations as a release step, build with `npm run build`, and run `npm start`. Configure the database URL and exact HTTPS app origin through the host’s secret/environment settings. TLS must terminate at the proxy; session cookies become Secure when the configured origin uses HTTPS.
-
-SSE endpoints must permit streamed responses, disable proxy buffering, and allow long-lived connections. The application starts a three-second job loop from Next instrumentation. A separately supervised `npm run worker` process is also available. Multiple loops are safe through database transactions and uniqueness, but a dedicated singleton worker reduces redundant polling. This design is not suitable for a short-lived request-only host without separate worker and stream infrastructure.
-
-Back up PostgreSQL, provide health monitoring, and verify session expiry, database recovery, and streaming behaviour on the chosen host. Existing hosting and a successful local build do not establish that the newest release or provider configuration has been deployed.
-
-For deployment commands, Docker/Compose, explicit public-demo opt-in, uploads persistence, CI, health monitoring and a backup/restore drill, follow `docs/LAUNCH_OPERATIONS.md`. Before a real business launch, record verified FSSAI numbers and verification notes in Admin outlet settings, confirm photo rights/allergens, provide the privacy contact and approved retention policy, and complete target-device and staging acceptance. Razorpay and email/SMS provider code is available; ordinary customer use requires the documented activation and acceptance checks.
-
-## Review the extended features
-
-- Customer: order two regular biryanis, apply BIRYANI10, select loyalty points and pay. Cancel while the order is PLACED to verify points return. WELCOME100 requires a new registered customer; the existing demo customer has paid history.
-- AI workspace: as Admin or Manager, open `/workspace/ai`; compare full/limited synthetic history, unusual-load fallback, minimum-respecting overrides and ten-minute late-message previews. Nothing is sent or saved. On mobile, choose a reorder suggestion and verify the cart changes only after explicit Add.
-- Customer party orders: send a request at least 24 hours ahead. Sign in as Manager for Kondapur (or Admin for any outlet), open Party requests and confirm with details. The customer sees the response.
-- Menu manager: edit a dish, add a Hyderabad city override, or set serving days and hours in IST. The kitchen stock switch remains independent of the serving schedule.
-- Overview: compare kitchen rows and change the reporting period. Repeat customers means two paid orders within that period. The Business targets section separately reports 30-day cohorts and checkout timing, and lets managers enter aggregate app-order baselines for matching periods.
-
-Generated outputs are ignored, not tracked. `npm run package:source` creates a small ZIP from committed source only. The optional technical design PDF and this file can be packaged in `output/submission.zip` (two files, under 25 MB). PDF source is `docs/TECHNICAL_DESIGN.md`; run `python scripts/build-tdd.py` with ReportLab and Pillow after browser verification to regenerate both the PDF and ZIP together. The builder validates the ZIP contents and size; visually inspect the resulting PDF before submission.
-
-## Quality verification
-
-The repository includes `/api/health`, strict nonce CSP/HSTS, email/mobile password sign-in, signup/recovery/contact-verification codes, privacy controls, 60 dishes across nine categories, secure photo uploads, delivery completion, fees/localities, prepayment wait estimates, large tablet tickets, connection states and business-target metrics. See the README for the latest recorded local verification and `docs/ACCEPTANCE_TESTING.md` for physical readability, human timing and sustained staging validation. Recheck the deployed release independently.
-
-
-## Live services
-
-The code supports Razorpay hosted checkout, PDF payment receipts, password sign-in, signup/recovery/contact-verification codes and transactional notifications. Amazon SES and AWS End User Messaging are the default messaging adapters; Resend/Twilio are optional. Follow [the live service guide](docs/LIVE_SERVICES.md) and set the named variables from `.env.example` in both the web and worker environments. Compose propagates these settings to both processes; an AWS-hosted workload should use an IAM role instead of copied credentials.
-
-The existing Render blueprint deliberately remains a demo deployment. AWS credits do not pay Render fees or Razorpay transaction fees. Using AWS for email/SMS does not itself deploy the web application to AWS.
-
-After upgrading, run `npm run db:migrate` and `npm run build`, then restart the web and worker processes together. Review **Workspace → Services** for configuration and queue status. Do not enable live keys while shared demo accounts are enabled. Test provider calls using the documented sandbox/controlled acceptance procedure before live customer use.
+The full configuration reference is in `.env.example` and `docs/LIVE_SERVICES.md`. Local demo review uses simulated payment and messaging adapters.
