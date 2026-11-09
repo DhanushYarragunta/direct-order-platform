@@ -6,7 +6,10 @@ const configured = (...keys: string[]) => keys.every((key) => !!process.env[key]
 export const emailProvider = () => process.env.EMAIL_PROVIDER || "ses";
 export const smsProvider = () => process.env.SMS_PROVIDER || "aws";
 export const emailConfigured = () => emailProvider() === "ses" ? configured("AWS_REGION", "EMAIL_FROM") : emailProvider() === "resend" && configured("RESEND_API_KEY", "EMAIL_FROM");
-const awsSmsBase = () => configured("AWS_REGION", "AWS_SMS_ORIGINATION_IDENTITY", "AWS_SMS_ENTITY_ID") && smsMaxPrice() !== null;
+// Never fall back to the more expensive international route when local setup is incomplete.
+const awsSmsRoute = () => process.env.AWS_SMS_ROUTE || "local";
+const awsSmsBase = () => configured("AWS_REGION") && smsMaxPrice() !== null &&
+  (awsSmsRoute() === "international" || awsSmsRoute() === "local" && configured("AWS_SMS_ORIGINATION_IDENTITY", "AWS_SMS_ENTITY_ID"));
 export const phoneConfigured = () => smsProvider() === "aws" ? awsSmsBase() && templateConfigured("otp") : smsProvider() === "twilio" && configured("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_VERIFY_SERVICE_SID");
 export const smsConfigured = () => smsProvider() === "aws" ? awsSmsBase() && templateConfigured("update") : smsProvider() === "twilio" && configured("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_MESSAGING_SERVICE_SID");
 function smsMaxPrice() {
@@ -18,16 +21,16 @@ function templateConfigured(purpose: "otp" | "update") {
   const text = process.env[`${prefix}_TEMPLATE`] || "";
   const keys = [...text.matchAll(/\{\{([^{}]+)\}\}/g)].map(match => match[1]);
   const allowed = purpose === "otp" ? ["code"] : ["orderNumber", "orderId", "status", "message", "orderUrl"];
-  return configured(`${prefix}_TEMPLATE_ID`) && text.length <= 1600 && keys.every(key => allowed.includes(key)) &&
+  return (awsSmsRoute() === "international" || configured(`${prefix}_TEMPLATE_ID`)) && text.length <= 1600 && keys.every(key => allowed.includes(key)) &&
     (purpose === "otp" ? keys.includes("code") : keys.includes("orderNumber") && (keys.includes("status") || keys.includes("message"))) &&
     !text.replace(/\{\{([^{}]+)\}\}/g, "").includes("{{");
 }
 export function renderSmsTemplate(purpose: "otp" | "update", values: Record<string, string>) {
-  if (!templateConfigured(purpose)) throw new AppError(503, "The approved SMS template is not configured.");
+  if (!templateConfigured(purpose)) throw new AppError(503, "The SMS template is not configured.");
   const template = process.env[purpose === "otp" ? "AWS_SMS_OTP_TEMPLATE" : "AWS_SMS_UPDATE_TEMPLATE"]!;
   const text = template.replace(/\{\{([^{}]+)\}\}/g, (_, key: string) => {
-    if (!(key in values) || /\{\{|\}\}/.test(values[key])) throw new AppError(503, "The approved SMS template requires a value.");
-    if (values[key].length > 30) throw new AppError(503, "An SMS template value exceeds the 30-character Indian DLT limit.");
+    if (!(key in values) || /\{\{|\}\}/.test(values[key])) throw new AppError(503, "The SMS template requires a value.");
+    if (awsSmsRoute() !== "international" && values[key].length > 30) throw new AppError(503, "An SMS template value exceeds the 30-character Indian DLT limit.");
     return values[key];
   });
   if (text.length > 1600) throw new AppError(503, "This update exceeds the SMS message limit.");
@@ -139,13 +142,16 @@ type SmsContext = { purpose: "otp"; code: string } | { purpose: "update"; orderN
 export async function sendSms(phone: string, text: string, context?: SmsContext) {
   liveProvider(context?.purpose === "otp" ? phoneConfigured() : smsConfigured());
   if (smsProvider() === "aws") {
-    if (!context) throw new AppError(503, "The approved SMS template is required.");
+    if (!context) throw new AppError(503, "The SMS template is required.");
     const body = context.purpose === "otp" ? renderSmsTemplate("otp", { code: context.code })
       : renderSmsTemplate("update", { orderNumber: context.orderNumber, orderId: context.orderId, status: context.status, message: context.message, orderUrl: context.orderUrl });
     try {
       const result = await awsSmsClient().send(new SendTextMessageCommand({
-        DestinationPhoneNumber: `+91${phone}`, OriginationIdentity: process.env.AWS_SMS_ORIGINATION_IDENTITY,
-        DestinationCountryParameters: { IN_ENTITY_ID: process.env.AWS_SMS_ENTITY_ID!, IN_TEMPLATE_ID: process.env[context.purpose === "otp" ? "AWS_SMS_OTP_TEMPLATE_ID" : "AWS_SMS_UPDATE_TEMPLATE_ID"]! },
+        DestinationPhoneNumber: `+91${phone}`,
+        ...(awsSmsRoute() === "local" ? {
+          OriginationIdentity: process.env.AWS_SMS_ORIGINATION_IDENTITY,
+          DestinationCountryParameters: { IN_ENTITY_ID: process.env.AWS_SMS_ENTITY_ID!, IN_TEMPLATE_ID: process.env[context.purpose === "otp" ? "AWS_SMS_OTP_TEMPLATE_ID" : "AWS_SMS_UPDATE_TEMPLATE_ID"]! },
+        } : {}),
         MessageBody: body, MessageType: "TRANSACTIONAL", MaxPrice: smsMaxPrice()!, TimeToLive: context.purpose === "otp" ? 300 : 3600,
       }), { abortSignal: AbortSignal.timeout(8000) });
       if (!result.MessageId) throw new CommunicationError("AWS_ACCEPTANCE_UNCERTAIN", false, true);

@@ -19,6 +19,7 @@ function awsConfig() {
   vi.stubEnv("AWS_SMS_OTP_TEMPLATE_ID", "otp-template-test"); vi.stubEnv("AWS_SMS_OTP_TEMPLATE", "TEST ONLY Code {{code}} expires in five minutes.");
   vi.stubEnv("AWS_SMS_UPDATE_TEMPLATE_ID", "update-template-test"); vi.stubEnv("AWS_SMS_UPDATE_TEMPLATE", "TEST ONLY Order {{orderNumber}}: {{message}} {{orderUrl}}");
   vi.stubEnv("AWS_SMS_MAX_PRICE_USD", "0.05");
+  vi.stubEnv("AWS_SMS_ROUTE", "local");
 }
 describe("AWS customer communications", () => {
   it("uses SESv2 with the default credential chain and disables automatic send retries", async () => {
@@ -42,6 +43,41 @@ describe("AWS customer communications", () => {
     expect(() => renderSmsTemplate("update", { orderNumber: "WEB-1", message: "Ready" })).toThrow("not configured");
     vi.stubEnv("AWS_SMS_MAX_PRICE_USD", "5.00");
     expect(communicationCapabilities().phoneCode).toBe(false);
+  });
+  it("sends international SMS without a sender or DLT parameters only when explicitly selected", async () => {
+    awsConfig(); vi.stubEnv("AWS_SMS_ROUTE", "international");
+    vi.stubEnv("AWS_SMS_ORIGINATION_IDENTITY", ""); vi.stubEnv("AWS_SMS_ENTITY_ID", "");
+    vi.stubEnv("AWS_SMS_OTP_TEMPLATE_ID", ""); vi.stubEnv("AWS_SMS_UPDATE_TEMPLATE_ID", "");
+    vi.stubEnv("AWS_SMS_MAX_PRICE_USD", "0.08");
+    mocks.smsSend.mockResolvedValue({ MessageId: "international-message" });
+    expect(communicationCapabilities().phoneCode).toBe(true);
+    await sendSms("9000000000", "Ignored arbitrary text", { purpose: "otp", code: "123456" });
+    const request = mocks.smsSend.mock.calls[0][0].input;
+    expect(request).toMatchObject({ DestinationPhoneNumber: "+919000000000", MessageBody: "TEST ONLY Code 123456 expires in five minutes.", MaxPrice: "0.08", TimeToLive: 300, MessageType: "TRANSACTIONAL" });
+    expect(request).not.toHaveProperty("OriginationIdentity");
+    expect(request).not.toHaveProperty("DestinationCountryParameters");
+  });
+  it("never silently switches incomplete local configuration to international SMS", async () => {
+    awsConfig(); vi.stubEnv("AWS_SMS_ROUTE", ""); vi.stubEnv("AWS_SMS_ENTITY_ID", "");
+    expect(communicationCapabilities().phoneCode).toBe(false);
+    await expect(sendSms("9000000000", "", { purpose: "otp", code: "123456" })).rejects.toThrow("not enabled");
+    vi.stubEnv("AWS_SMS_ROUTE", "typo");
+    expect(communicationCapabilities().phoneCode).toBe(false);
+    expect(mocks.smsSend).not.toHaveBeenCalled();
+  });
+  it("keeps international templates validated and order updates independently disabled", async () => {
+    awsConfig(); vi.stubEnv("AWS_SMS_ROUTE", "international");
+    vi.stubEnv("TRANSACTIONAL_SMS_ENABLED", "false");
+    expect(communicationCapabilities()).toMatchObject({ phoneCode: true, transactionalSms: "disabled" });
+    vi.stubEnv("AWS_SMS_OTP_TEMPLATE", "{{code}} {{unknown}}");
+    expect(communicationCapabilities().phoneCode).toBe(false);
+    await expect(sendSms("9000000000", "", { purpose: "otp", code: "123456" })).rejects.toThrow("not enabled");
+    vi.stubEnv("AWS_SMS_UPDATE_TEMPLATE", "Order {{orderNumber}}: {{status}} {{orderUrl}}");
+    mocks.smsSend.mockResolvedValue({ MessageId: "international-update" });
+    const orderUrl = "https://example.test/orders/cm123456789012345678901234";
+    await sendSms("9000000000", "", { purpose: "update", orderNumber: "WEB-1", orderId: "cm123456789012345678901234", status: "Test Order confirmed", message: "", orderUrl });
+    expect(mocks.smsSend.mock.calls[0][0].input).toMatchObject({ MessageBody: `Order WEB-1: Test Order confirmed ${orderUrl}`, TimeToLive: 3600 });
+    expect(() => renderSmsTemplate("update", { orderNumber: "WEB-1", status: "Ready", orderUrl: "x".repeat(1600) })).toThrow("message limit");
   });
   it("supports short approved status templates without inserting the full update", async () => {
     awsConfig(); vi.stubEnv("AWS_SMS_UPDATE_TEMPLATE", "TEST ONLY Order {{orderNumber}} is {{status}}.");

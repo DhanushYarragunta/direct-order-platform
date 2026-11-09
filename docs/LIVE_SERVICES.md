@@ -37,10 +37,11 @@ Use the hosting platform's protected runtime settings. `.env.example` lists conf
 | `SMS_PROVIDER` | `aws` by default; `twilio` is optional. |
 | `AWS_REGION` | Region containing the configured SES/SMS resources. The AWS SDK receives it explicitly. |
 | `TRANSACTIONAL_EMAIL_ENABLED`, `TRANSACTIONAL_SMS_ENABLED` | Set an individual switch to `true` only when that order-update channel is ready. Both default to off. |
-| `AWS_SMS_ORIGINATION_IDENTITY` | Registered AWS SMS sender identity or resource accepted by SendTextMessage. |
+| `AWS_SMS_ROUTE` | `local` (default) requires DLT registration. Explicit `international` uses AWS shared short codes for India at a higher price. No automatic fallback. |
+| `AWS_SMS_ORIGINATION_IDENTITY` | Registered AWS SMS sender identity for the local route; omitted from international sends. |
 | `AWS_SMS_ENTITY_ID` | Indian DLT Principal Entity ID for the approved sender/use case. |
-| `AWS_SMS_OTP_TEMPLATE_ID`, `AWS_SMS_OTP_TEMPLATE` | Matching DLT template ID and exact approved OTP text, using `{{code}}` for its variable. |
-| `AWS_SMS_UPDATE_TEMPLATE_ID`, `AWS_SMS_UPDATE_TEMPLATE` | Matching DLT template ID and approved order-update text. See template rules below. |
+| `AWS_SMS_OTP_TEMPLATE_ID`, `AWS_SMS_OTP_TEMPLATE` | OTP text using `{{code}}`. The local route also requires a matching DLT template ID and exact approved text. |
+| `AWS_SMS_UPDATE_TEMPLATE_ID`, `AWS_SMS_UPDATE_TEMPLATE` | Order-update text. The local route also requires a matching DLT template ID and approved text. See template rules below. |
 | `AWS_SMS_MAX_PRICE_USD` | Per-message maximum sent to AWS; default `0.05`. The application accepts a positive decimal up to `1.00`. This is not a monthly spending cap. |
 | `RESEND_API_KEY` | Used only with `EMAIL_PROVIDER=resend`. |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Used only with `SMS_PROVIDER=twilio`. |
@@ -87,7 +88,7 @@ References: [SES DKIM](https://docs.aws.amazon.com/ses/latest/dg/send-email-auth
 
 ## Activate AWS SMS for India
 
-The application supports Indian mobile numbers. The AWS adapter deliberately requires a registered sender, Entity ID and matching templates for the local Indian route; it does not invent a sender or approved message text.
+The application supports Indian mobile numbers. The default `AWS_SMS_ROUTE=local` deliberately requires a registered sender, Entity ID and matching templates; it does not invent a sender or approved message text. Missing local configuration never falls back to a more expensive route. For a demonstration without DLT registration, see the explicit international setup in [SMS activation](SMS_ACTIVATION.md).
 
 1. Complete the applicable DLT sender/use-case/template registration and the AWS sender registration. Check the AWS SMS account's sandbox/production status, destination permissions and spending limits in the chosen region.
 2. Provide the actual origination identity and DLT Entity ID. Set separate OTP and order-update template IDs alongside their exact approved static text. Replace only the approved variable positions with the application placeholders below; preserve the approved punctuation and spacing.
@@ -101,7 +102,7 @@ The application supports Indian mobile numbers. The AWS adapter deliberately req
 
 Prefer an approved template using `{{status}}`: the application supplies controlled short labels such as “Order confirmed”, “Ready for pickup”, “Preparation delayed” and “Refund pending”. Ordinary labels are at most 25 characters; test payments add “Test ” and remain within 30 characters. Indian DLT rejects variables longer than 30 characters, so the application rejects an oversized replacement before contacting AWS. `{{message}}` inserts the full generated update and will therefore often exceed the limit; keep detailed updates in email and the order page. A complete `{{orderUrl}}` can also exceed the limit. For links, include the actual domain and `/orders/` path as static approved template text, with `{{orderId}}` as the variable. The local order ID is normally a 25-character CUID, and the same 30-character validation applies to it.
 
-The operator must preserve the approved template's case, punctuation, spacing and character encoding. The application does not certify DLT approval or guarantee a single SMS segment. Unknown placeholders, any substituted value over 30 characters, and rendered bodies over 1,600 characters are rejected.
+For local routes, the operator must preserve the approved template's case, punctuation, spacing and character encoding. The application does not certify DLT approval or guarantee a single SMS segment. Unknown placeholders and rendered bodies over 1,600 characters are rejected on both routes; the 30-character variable limit applies to local DLT templates.
 
 AWS SendTextMessage receives the DLT Entity/Template IDs, `MessageType=TRANSACTIONAL`, the configured `MaxPrice`, and a 300-second TTL for OTPs. Order-update TTL is 3,600 seconds. OTP codes are randomly generated, hashed at rest, valid for five minutes and consumed once with at most five guesses. They never appear in a live API response or application log.
 
