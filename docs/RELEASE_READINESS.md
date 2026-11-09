@@ -1,6 +1,12 @@
 # Release readiness — 9 November 2026
 
-## Current customer and restaurant completion release — deployed and verified
+## Current SMS release — deployed; customer-wide access pending AWS
+
+International SMS support in commit `baca6cfcb68e065e57397d5dc129e747384b5826` is **Live** in Render deployment `dep-dbor2qtfi0pc73bf66ng`, completed at **11:44:44 UTC / 17:14:44 IST**. The dedicated runtime IAM identity passed a free AWS SMS dry run, and the application adapter sent a real setup message whose handset receipt the owner confirmed. Hosted phone verification, phone password recovery and order-update SMS are configured. Local validation passed **236 unit tests, 133 database tests**, TypeScript and the production build; [CI run 42611033287](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42611033287) passed, including browser checks and the Docker build. **23 hosted smoke checks passed** after deployment.
+
+**Customer-wide SMS remains pending AWS approval.** [Support case 179422553800253](https://support.console.aws.amazon.com/support/home#/case/?displayId=179422553800253&language=en) was submitted with the owner's authorization at **17:28:59 IST** for Mumbai SMS Production Access. AWS still reports **SANDBOX** and a **USD 1 monthly limit**; only AWS-verified destinations can currently receive SMS. No spending increase or support upgrade was requested. Website account-verification and order-lifecycle handset checks remain separate from the confirmed adapter test. See [SMS activation](SMS_ACTIVATION.md) for exact configuration, costs and evidence.
+
+## Preceding customer and restaurant completion release — deployed and verified
 
 Commit **`7d5bbfe0449bcc15357ff299d3f7a9d3707c5c9c`** is **Live** in Render deployment **`dep-dboq7c7b9u1s73dub640`**, completed at **2026-11-09T10:45:09Z (16:15:09 IST)** after the GitHub push triggered automatic deployment. Runtime logs confirm that the ninth migration applied successfully and the application became ready. [GitHub Actions run 42602998263](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42602998263), job `129111795987`, completed successfully, including the isolated database/browser suites and Docker build. CI evidence is `.local/customer-completion-ci.json`. All **23 hosted API checks passed at 10:48:35 UTC / 16:18:35 IST**, including anonymous root/favourites login redirects, profile/favourites and coupon-table contracts, administrator reads, session logout/revocation and location search. Only the verification script's session was created/revoked; no hosted customer, coupon, order or payment writes were performed. The location search returned six real Photon results. Evidence: `.local/customer-completion-live-verification.json`.
 
