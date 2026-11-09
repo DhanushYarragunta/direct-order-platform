@@ -1,6 +1,20 @@
 # Release readiness — 9 November 2026
 
-## Profile, saved addresses and search — verified locally, pending deployment
+## Current login-first release — deployed and verified
+
+Commit **`b8617c55f4f3959fd00127388ccb8516198a6290`** is **Live** in Render deployment **`dep-dboose3l550s73aeov30`**, completed at **2026-11-09T09:13:20.175341Z (14:43:20 IST)** after a manual Render trigger. It supersedes `36cec81`, recorded below. Logs confirmed no pending migrations and successful startup on port `10000`; all eight migrations remain applied. [CI run 42589984250](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42589984250), job **`129069002647`**, succeeded, including the check/build, isolated database/browser verification, gateway and registration fixtures, Docker image build and cleanup. CI evidence is `.local/login-first-ci-verification.json`.
+
+The root server page calls `currentUser()` before rendering the menu and redirects signed-out or invalid-session visitors to `/login?next=/`. Valid sessions retain menu access. Successful login replaces the document at the validated return path so an earlier cached signed-out redirect cannot strand the new session. Existing API authorization and public help/privacy routes are unchanged.
+
+Local verification passed **227 unit tests and 60 browser scenarios** (54 core, one hosted-checkout fixture and five registration/recovery scenarios), plus TypeScript and the production build. The new browser scenarios cover signed-out entry without JavaScript, password login and reload, invalid/expired or revoked cookies, and Back after logout. The latest **128 local database integration tests** passed at the preceding profile/search checkpoint; no database changes were added. The new release's CI independently passed its isolated database verification step.
+
+All **19 hosted smoke checks passed at 2026-11-09T09:21:01.467Z (14:51:01 IST)**. The original profile/search checks passed along with HTTP `307` redirects to login before authentication and after session revocation, and HTTP `200` menu access while authenticated. An independent anonymous root request also returned HTTP `307` with `Location: /login?next=/`. Evidence is `.local/profile-search-live-verification.json`, labelled with the verified commit and Render deployment. The script created and revoked only its own administrator verification session; no hosted customers, profiles, saved addresses, orders or paid actions were changed.
+
+The latest location-search check returned **one supported-area fallback result** (`provider: local`). This validates the fallback path but does not establish Photon availability at this checkpoint. The preceding `36cec81` check returned six real Photon results; its separate record is preserved below. Food-search keyboard behavior was reviewed in the browser for that preceding profile/search release and is not asserted by the API-only smoke script.
+
+## Preceding profile, saved-address and search release — deployed and verified
+
+Commit **`36cec8145ab427574b06f33af52ca4662adefa00`** went **Live** in Render deployment **`dep-dbomufq9lscs73d6rupg`** at **2026-11-09T07:14:47Z (12:44:47 IST)**. [CI run 42576412352](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42576412352) passed for this commit. Startup applied the additive eighth migration, `20261109090000_customer_profiles`, before starting the new application.
 
 The customer avatar now opens a profile inspired by the supplied Swiggy/Zomato references: identity card, Edit profile, quick actions, grouped account links and saved-address management. Customers can edit their name and mobile number, save up to ten Home/Work/Other addresses and choose a default. The default address and recipient number fill checkout after a reload. Staff profiles remain read-only and retain their workspace navigation.
 
@@ -8,11 +22,13 @@ Food search adds dish/category suggestions, keyboard selection, vegetarian filte
 
 Verification passed **227 unit tests, 128 database integration tests and 55 browser scenarios** (49 core, one hosted-checkout fixture and five registration/recovery scenarios), TypeScript and the production build. Browser checks cover persistent defaults, recipient autofill, failed refresh recovery, account switching, delayed address-save completion, stale-quote invalidation, typed-location delivery, GPS routing and existing payment/signup flows. The revised profile was visually reviewed at 320px, 390px and 1440px. Evidence: `.local/core-verification.json`, `.local/gateway-browser.json`, `.local/registration-browser.json` and `.local/screenshots/profile-*.png`. The integration tests passed before the final frontend refinements; the core browser suite was rerun against the final production build.
 
-The local preview is available at `http://127.0.0.1:3000/profile`, using simulated payments with transactional messaging disabled. This feature revision has not been pushed or deployed. The hosted release below remains unchanged and will need its own migration/deployment verification when this revision is published. Provider fixtures in automated suites do not establish live payment or email delivery.
+All **16 hosted API smoke checks passed at 2026-11-09T07:17:56Z (12:47:56 IST)**. They cover health and menu reads, anonymous profile/address rejection, search validation and cross-site rejection, administrator password login, authenticated profile/address contracts and verification-session logout/revocation. The profile read exercises the new `SavedAddress` relation, which the health endpoint alone cannot establish. The real Photon request returned **six results**. Historical evidence is preserved in `.local/profile-search-release-36cec81-verification.json`.
 
-## Current account access release — deployed and verified
+A hosted browser review confirmed keyboard food-search selection returning **eight Biryani results** and visible administrator profile navigation. No hosted customer creation, profile/address changes, orders or paid actions were performed; the API check created and revoked only its own verification session. Automated payment/email fixtures do not establish real provider acceptance, and these hosted checks did not test customer address writes or checkout.
 
-Commit **`27546c0a125688351033ef7ba1439dc950b1565e`** is **Live** in Render deployment **`dep-dbo4iffavr4c73b1erhg`**. On **9 November 2026**, the signed-in Render dashboard independently confirmed the exact commit, deployment and owner-approved **My Workspace**. Recent application logs show all seven migrations found, no pending migrations and successful startup, with no application errors visible in the reviewed one-hour window.
+## Historical account access release — deployed and verified
+
+Commit **`27546c0a125688351033ef7ba1439dc950b1565e`** was **Live** in Render deployment **`dep-dbo4iffavr4c73b1erhg`** before the profile/search release superseded it. On **9 November 2026**, the signed-in Render dashboard independently confirmed that exact commit, deployment and owner-approved **My Workspace**. At that checkpoint, application logs showed all seven migrations found, no pending migrations and successful startup, with no application errors visible in the reviewed one-hour window.
 
 This deployed release adds an accessible account dialog with sign-out on phones and tablets, recoverable sign-out errors, retryable privacy preferences and accurate deletion confirmation even if the follow-up account refresh fails. Deterministic email-provider rejections now direct users to support or existing-account password login; temporary failures retain retry guidance. The registration form links to account-access help. Email verification remains required before registration.
 
@@ -26,7 +42,7 @@ After the owner approved the [production-access request](SES_PRODUCTION_ACCESS_R
 
 ## Preceding AI demonstration release — deployed and verified
 
-Commit **`82f5cfc02883f8163dcfba791a4e1f4a1293bc0e`** was deployed successfully in Render deployment **`dep-dbnpes0473hc739u1d2g`**. The dashboard confirmed the exact commit and successful deployment state at that checkpoint; the account access release above is now live.
+Commit **`82f5cfc02883f8163dcfba791a4e1f4a1293bc0e`** was deployed successfully in Render deployment **`dep-dbnpes0473hc739u1d2g`**. The dashboard confirmed the exact commit and successful deployment state at that historical checkpoint; subsequent account-access and profile/search releases are recorded above.
 
 The release adds mobile reorder cards, honest checkout/tracking explanations and the ADMIN/MANAGER AI workspace at `/workspace/ai`. Its 300 explicitly synthetic training examples stay in memory, with separate `demo-ridge-prep-v1` / `demo-rules-v1` provenance; live learning still requires at least 60 qualifying completed orders. Current/busy loads, full/20-example history, unusual-load fallback, minimum-respecting overrides and ten-minute-late alerts can be previewed. Scenario messages are labelled preview-only and are neither sent nor saved. No training orders were inserted, and cloud/provider settings were unchanged.
 
@@ -40,7 +56,7 @@ The preceding AI commit `33abacad` failed [CI run 42414951751](https://github.co
 
 ## Preceding menu/authentication release
 
-Commit **`de354569c052cfa6eabfc1b86ae87d752171be4f`** deployed successfully in Render deployment **`dep-dbno6jgae00c738vmtl0`**. All **seven migrations** are applied, including `20261108010000_password_recovery`.
+Commit **`de354569c052cfa6eabfc1b86ae87d752171be4f`** deployed successfully in Render deployment **`dep-dbno6jgae00c738vmtl0`**. All **seven migrations** available at that checkpoint were applied, including `20261108010000_password_recovery`.
 
 The approved additive catalogue import inserted **53 dishes and 159 availability rows**. A subsequent dry run reported **zero changes**. Kondapur, Kukatpally and Gachibowli now each return **60 available dishes**, and all **60 catalogue JPEG URLs returned HTTP 200**. The original seven dishes, three outlets and existing records were preserved.
 
@@ -80,7 +96,7 @@ Before the update, runtime logs repeatedly reported database/Prisma failures fro
 
 ## Earlier Render update — seven-item checkpoint
 
-The earlier Render deployment **`dep-dbnn8hng6t6s73cdb0dg`** succeeded on commit **`d4a0bdd`**. Startup applied the six migrations then present before starting the application: core, remaining scope, quality, live services, worker status and the gateway webhook inbox. The owner-approved test-mode environment settings and Docker Command below were applied to the existing service. The current seven-migration, 60-item rollout is recorded above.
+The earlier Render deployment **`dep-dbnn8hng6t6s73cdb0dg`** succeeded on commit **`d4a0bdd`**. Startup applied the six migrations then present before starting the application: core, remaining scope, quality, live services, worker status and the gateway webhook inbox. The owner-approved test-mode environment settings and Docker Command below were applied to the existing service. The subsequent 60-item rollout, profile/search migration and current eight-migration login-first release are recorded above.
 
 | Hosted check | Historical observed result |
 | --- | --- |
