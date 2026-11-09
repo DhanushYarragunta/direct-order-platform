@@ -10,13 +10,13 @@ This is the catalog for the Deccan Kitchen demonstration project. Prices and por
 - The approved additive import inserted 53 dishes and 159 outlet availability rows into the original seven-dish database.
 - The hosted catalog rollout is complete; remaining payment, message-provider and hosting checks are tracked in `docs/RELEASE_READINESS.md`.
 
-## Completed hosted rollout
+## Completed hosted rollout — 8 November 2026
 
 Render deployment **`dep-dbno6jgae00c738vmtl0`** succeeded on commit **`de354569c052cfa6eabfc1b86ae87d752171be4f`**. All seven migrations are applied, including `20261108010000_password_recovery`.
 
 The approved import inserted **53 dishes and 159 availability rows**. A subsequent dry run reported **zero changes**. All three outlets now return **60 available dishes**, and all **60 JPEG URLs returned HTTP 200**. This expansion follows the original seven-dish initialization, which inserted 33 records: three outlets, seven dishes, two add-ons and 21 availability rows. That earlier import is historical; the current hosted catalog contains all 60 reviewed dishes below.
 
-The deployment reused the existing Render Free service and database with `DEMO_MODE=false`; no plan or resource upgrade was performed. SES remains sandboxed, actual SMS is unavailable, and provider acceptance remains incomplete. The Free service sleeps when inactive and has no separate continuous worker; the Free PostgreSQL database expires on **5 December 2026**.
+The deployment reused the existing Render Free service and database with `DEMO_MODE=false`; no plan or resource upgrade was performed. At this rollout checkpoint, SES was sandboxed, actual SMS was unavailable, and provider acceptance was incomplete. AWS granted SES production access later on **8 November 2026**; the approval and remaining delivery checks are recorded in [release readiness](RELEASE_READINESS.md). The Free service sleeps when inactive and has no separate continuous worker; the Free PostgreSQL database expires on **5 December 2026**.
 
 ## Reviewed catalog
 

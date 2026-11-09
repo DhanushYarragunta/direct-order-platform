@@ -1,16 +1,22 @@
-# Release readiness — 8 November 2026
+# Release readiness — 9 November 2026
 
-## Account access fixes — locally verified, deployment pending
+## Current account access release — deployed and verified
+
+Commit **`27546c0a125688351033ef7ba1439dc950b1565e`** is **Live** in Render deployment **`dep-dbo4iffavr4c73b1erhg`**. On **9 November 2026**, the signed-in Render dashboard independently confirmed the exact commit, deployment and owner-approved **My Workspace**. Recent application logs show all seven migrations found, no pending migrations and successful startup, with no application errors visible in the reviewed one-hour window.
 
 The current changes add an accessible account dialog with sign-out on phones and tablets, recoverable sign-out errors, retryable privacy preferences and accurate deletion confirmation even if the follow-up account refresh fails. Deterministic email-provider rejections now direct users to support or existing-account password login; temporary failures retain retry guidance. The registration form links to account-access help. Email verification remains required before registration.
 
 Local verification passed **196 unit tests, 115 database integration tests and 43 browser scenarios** (37 core, one hosted-checkout fixture and five registration/recovery scenarios), TypeScript and the production build. Customer account controls at 390px and administrator controls at 320px were visually reviewed; the narrow administrator dialog scrolls to sign-out without horizontal overflow. Provider calls in automated suites were intercepted or mocked.
 
-Read-only AWS inspection confirmed SES in `ap-south-1` is healthy but sandboxed, with only the owner's email identity verified. At the owner's explicit approval, the [prepared production-access request](SES_PRODUCTION_ACCESS_REQUEST.md) was submitted. AWS reports **`PENDING`** and `ProductionAccessEnabled=false`; the submission does not enable unrestricted email yet. The hosted health endpoint returned HTTP 200 with a reachable database. Existing accounts can use password sign-in without email OTP.
+[CI run 42469869009](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42469869009), job **`128697901602`**, passed for this exact commit at **15:43:34 IST on 8 November 2026**. A fresh API/log review on 9 November confirmed **196 unit tests, 115 database tests and 43 browser scenarios** (37 core + one gateway + five registration/recovery), TypeScript, production build, Docker image build, artifact upload and cleanup. The sanitized local CI evidence is `.local/account-release-ci-verification.json`.
 
-## Current AI demonstration release — deployed and verified
+All **seven hosted account-access checks passed again at 11:13:36 IST on 9 November**. They cover health/database reachability, administrator password login, mobile navigation and sign-out, privacy preference loading, the deployed account-help heading, session revocation and anonymous administration rejection. The script's commit/deployment labels were checked independently against Render above. Evidence is `.local/account-access-live-verification.json`; the mobile capture is `.local/screenshots/account-access-live.png`. Only the verification session was signed out. These checks do not establish email delivery or customer checkout acceptance.
 
-Commit **`82f5cfc02883f8163dcfba791a4e1f4a1293bc0e`** is **Live** in Render deployment **`dep-dbnpes0473hc739u1d2g`**. The dashboard confirmed the exact commit and successful deployment state.
+After the owner approved the [production-access request](SES_PRODUCTION_ACCESS_REQUEST.md), AWS granted SES access in `ap-south-1` on **8 November**: `ProductionAccessEnabled=true`, `SendingEnabled=true`, `EnforcementStatus=HEALTHY`, review status **`GRANTED`**. The signed-in console reconfirmed **“You are in Production”** and **Healthy** on **9 November**, with a quota of **50,000 emails/day** and **14 emails/second**. Individual recipient verification in SES is no longer required. No sending domain is configured; actual signup/recovery receipt and inbox placement after approval remain unverified. Existing accounts can use password sign-in without email OTP. No provider settings or messages were changed during this verification.
+
+## Preceding AI demonstration release — deployed and verified
+
+Commit **`82f5cfc02883f8163dcfba791a4e1f4a1293bc0e`** was deployed successfully in Render deployment **`dep-dbnpes0473hc739u1d2g`**. The dashboard confirmed the exact commit and successful deployment state at that checkpoint; the account access release above is now live.
 
 The release adds mobile reorder cards, honest checkout/tracking explanations and the ADMIN/MANAGER AI workspace at `/workspace/ai`. Its 300 explicitly synthetic training examples stay in memory, with separate `demo-ridge-prep-v1` / `demo-rules-v1` provenance; live learning still requires at least 60 qualifying completed orders. Current/busy loads, full/20-example history, unusual-load fallback, minimum-respecting overrides and ten-minute-late alerts can be previewed. Scenario messages are labelled preview-only and are neither sent nor saved. No training orders were inserted, and cloud/provider settings were unchanged.
 
@@ -20,7 +26,7 @@ All **19 hosted checks passed on this exact commit at 03:00:37 IST on 8 November
 
 [CI run 42415842181](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42415842181), job **`128533625015`**, passed for the exact deployed commit at **03:05:25 IST on 8 November 2026**. Its logs confirm **196 unit tests, 112 database tests and 38 browser scenarios** (33 core + one gateway + four registration/recovery). TypeScript, the production build, Docker image build, artifact upload and cleanup all passed.
 
-The preceding AI commit `33abacad` failed [CI run 42414951751](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42414951751) when hydration replaced a browser-test element. The current commit changes only test synchronization: locator trial-click retries wait through that replacement. Application behavior and cloud settings were unchanged.
+The preceding AI commit `33abacad` failed [CI run 42414951751](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42414951751) when hydration replaced a browser-test element. Commit `82f5cfc` changed only test synchronization: locator trial-click retries wait through that replacement. Application behavior and cloud settings were unchanged.
 
 ## Preceding menu/authentication release
 
@@ -46,7 +52,7 @@ The owner requested a **60-item demonstration menu** and password-based sign-in 
 
 The final CI run above covers all category filters, phone/password login, persistent cookies, reset delivery, replay rejection and session revocation. The seventh password-recovery migration and hosted catalogue import are complete. Provider fixtures establish application behavior; real message delivery remains subject to the provider restrictions below.
 
-The owner clarified that this is a demonstration project and has no existing SMS sender/provider setup. Read-only AWS inspection found `ap-south-1` SMS account tier **SANDBOX**, with **no registrations and no sender IDs**. SMS recovery is implemented and tested with mocked AWS/Twilio transports; real SMS is unavailable and no SMS enablement was applied. The new interface reports SMS recovery unavailable and offers verified-email recovery. Password-reset codes are never displayed or faked. SES remains sandboxed with its existing verified-recipient restriction, and the public Render database remains in non-demo authentication mode.
+The owner clarified that this is a demonstration project and has no existing SMS sender/provider setup. Read-only AWS inspection found `ap-south-1` SMS account tier **SANDBOX**, with **no registrations and no sender IDs**. SMS recovery is implemented and tested with mocked AWS/Twilio transports; real SMS is unavailable and no SMS enablement was applied. The new interface reports SMS recovery unavailable and offers verified-email recovery. Password-reset codes are never displayed or faked. SES was still sandboxed at this menu/authentication checkpoint; its subsequent production approval is recorded above. The public Render database remains in non-demo authentication mode.
 
 ## Completed judges' administrator setup
 
@@ -95,7 +101,7 @@ The owner approved this test-mode setup on 8 November 2026. The update reused th
 | `SUPPORT_EMAIL` | Existing verified sender/contact supplied by the owner |
 | `EMAIL_PROVIDER`, `AWS_REGION`, `EMAIL_FROM` | SES, `ap-south-1`, existing verified sender |
 | AWS sending identity/credentials | Dedicated `deccan-render-ses-test` credential limited to `ses:SendEmail` from the verified identity in `ap-south-1`; entered in Render secret settings without using the owner's administrative login |
-| `TRANSACTIONAL_EMAIL_ENABLED` | `true`; SES sandbox still limits recipients until approval |
+| `TRANSACTIONAL_EMAIL_ENABLED` | `true`; SES production access was subsequently granted on 8 November and reconfirmed on 9 November |
 | `TRANSACTIONAL_SMS_ENABLED` | `false` |
 | `RUN_BACKGROUND_JOBS` | `true`, because this existing service has no separate worker; jobs stop while Free hosting sleeps |
 
@@ -104,7 +110,7 @@ The original seven-item catalogue initialization and the requested 60-item expan
 ## Remaining provider checks
 
 - The existing Razorpay test transaction captured ₹320. Provider reads confirm ₹0 refunded and no refund records. Both documented refund request paths returned HTTP 400; the exact provider-side cause is unconfirmed. Keep the full refund pending and review balance/payment eligibility in the merchant dashboard.
-- The SES sender is verified, feedback forwarding is enabled, and the account suppresses bounces/complaints. A prior test email arrived in Spam. Production access is still disabled; a sender domain and inbox-placement checks remain necessary for a dependable launch.
+- SES production access is granted and the existing email sender is verified. Feedback forwarding and bounce/complaint suppression were enabled at the previous provider check. A prior test email arrived in Spam. Verify actual signup and recovery receipt after approval, configure a sending domain and check inbox placement before a dependable launch.
 - The SMS account is sandboxed with no registrations or sender IDs. The application path is implemented and mock-tested, but no actual SMS code or update has been sent by this revision and no provider setup was enabled.
 - Configure the matching test webhook at `/api/payments/razorpay/webhook` and verify provider-triggered recovery against the updated host. The deployment has succeeded, but public provider delivery has not yet been confirmed; local signed webhook tests do not prove it.
 - Live merchant activation, live keys, sender approval, persistent worker hosting and operational recovery checks are required before accepting real customer orders. SMS additionally requires the applicable sender/template registration.

@@ -1,14 +1,20 @@
-# SES production access request — submitted, pending AWS review
+# SES production access request — approved
 
-## Verified status on 8 November 2026
+## Verified approval
 
-Read-only AWS checks in `ap-south-1` returned `ProductionAccessEnabled=false`, `SendingEnabled=true` and `EnforcementStatus=HEALTHY`. The daily sending quota is 200 and the sending rate is one message per second. Only the owner's existing email identity is verified; no domain identity is configured. Bounce and complaint suppression are enabled.
+After submission, a read-only AWS account check on **8 November 2026** returned `ProductionAccessEnabled=true`, `SendingEnabled=true`, `EnforcementStatus=HEALTHY` and review status **`GRANTED`** in `ap-south-1`.
 
-The Render application's `/api/health` returned HTTP 200 with a reachable database. `/api/auth/methods` confirms non-demo authentication, SES email and disabled SMS. SES sandbox restrictions prevent signup codes from reaching unverified recipients. Password sign-in for existing accounts does not require an email code.
+The signed-in SES console reconfirmed **“You are in Production — Asia Pacific (Mumbai) region”** and **Healthy** on **9 November**. The console shows **50,000 emails per 24 hours**, a maximum rate of **14 emails/second**, and no domain identities. Signup recipients no longer need to be separately verified in SES; the application still verifies their email ownership by code. Approval does not establish inbox delivery: actual signup/recovery receipt after approval, sending-domain setup and inbox placement remain to be checked.
+
+## Initial restriction — before approval
+
+Before submission on 8 November, read-only AWS checks returned `ProductionAccessEnabled=false`, `SendingEnabled=true` and `EnforcementStatus=HEALTHY`. The daily quota was 200, at one message per second. Only the owner's existing email identity was verified, with no domain identity configured. Bounce and complaint suppression were enabled.
+
+The Render application's `/api/health` returned HTTP 200 with a reachable database. `/api/auth/methods` confirmed non-demo authentication, SES email and disabled SMS. The then-active SES sandbox restriction prevented signup codes from reaching unverified recipients. Existing-account password sign-in did not require an email code.
 
 ## Submitted request
 
-The owner approved this exact request on **8 November 2026**, and it was submitted using `sesv2 put-account-details` in `ap-south-1`. The subsequent account read returned review status **`PENDING`**, with `ProductionAccessEnabled=false` and `SendingEnabled=true`. This requests removal of the recipient restriction, not an increase in quota. Approval and timing are controlled by AWS; ordinary unverified recipients remain blocked while review is pending.
+The owner approved the exact request below on **8 November 2026**, and it was submitted using `sesv2 put-account-details` in `ap-south-1`. The immediate account read returned review status **`PENDING`**, with `ProductionAccessEnabled=false` and `SendingEnabled=true`; the later **`GRANTED`** result above supersedes that state. The request sought removal of the recipient restriction with the existing sending limits; AWS's approved quotas are recorded above. The submitted use-case text is preserved unchanged.
 
 - Region: `ap-south-1`
 - Mail type: `TRANSACTIONAL`
@@ -26,6 +32,6 @@ We do not use purchased address lists or send bulk marketing campaigns. An optio
 
 We request access for this low-volume test use case with the existing sending limits. We understand that AWS may require additional sender-domain or operational information before approving access.
 
-## If access is needed before approval
+## Historical fallback while approval was pending
 
-The owner can authorize verification emails to named tester addresses. Each recipient must follow AWS's verification link before signup can deliver a code. This remains restricted testing, not public signup. Existing judges' management credentials already support password sign-in without email OTP. Do not disable application email verification or mark contacts verified merely to bypass SES restrictions.
+Before approval, the owner could authorize verification emails to named tester addresses, which then had to follow AWS's verification link before signup could deliver a code. That restricted-testing fallback is no longer required in the approved Mumbai account. Existing judges' management credentials support password sign-in without email OTP. Application email verification remains required; contacts must not be marked verified merely to bypass delivery problems.

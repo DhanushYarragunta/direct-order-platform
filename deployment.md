@@ -4,7 +4,9 @@
 
 Project repository: https://github.com/DhanushYarragunta/direct-order-platform
 
-The application has a local review environment and an existing public Render deployment. The AI/mobile revision passed local TypeScript/build, 196 unit tests, 112 integration tests and 38 browser scenarios. Commit `82f5cfc02883f8163dcfba791a4e1f4a1293bc0e` is live on Render. All 19 hosted checks passed on that commit; CI also passed for the exact deployed commit. Deployment and CI details are recorded in `docs/RELEASE_READINESS.md`. Later local edits do not update that release. Follow `docs/RENDER.md` for upgrades and controlled staging; the root `render.yaml` retains safe public-demo settings. Check the actual GitHub Actions result and the deployed commit for each service instead of assuming local edits are published.
+The account-access revision, commit `27546c0a125688351033ef7ba1439dc950b1565e`, is live in Render deployment `dep-dbo4iffavr4c73b1erhg`. Local verification on 8 November 2026 passed TypeScript, the production build, 196 unit tests, 115 integration tests and 43 browser scenarios. [CI run 42469869009](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42469869009) passed for that exact commit, including the database/browser suites and Docker build. Seven hosted checks passed again at **11:13:36 IST on 9 November 2026**, covering health, management sign-in, mobile account navigation, privacy loading, account help, sign-out and access rejection. These checks do not establish signup or recovery email receipt. See [release readiness](docs/RELEASE_READINESS.md) for deployment, CI and provider evidence.
+
+Follow `docs/RENDER.md` for upgrades and controlled staging; the root `render.yaml` retains safe public-demo settings. Check the actual GitHub Actions result and deployed commit for each service when publishing later changes.
 
 ## Local steps
 

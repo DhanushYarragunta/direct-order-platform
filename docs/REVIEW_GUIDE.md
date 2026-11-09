@@ -2,7 +2,7 @@
 
 For local/demo review, open http://127.0.0.1:3000 with `DEMO_MODE=true` and use the Customer, Admin, Manager and outlet Kitchen buttons at `/login`. Separate browser profiles keep sessions independent. On the hosted demonstration, use `judge@deccan.example` with the password supplied privately; the local demo shortcuts are disabled.
 
-The AI/mobile revision passed local TypeScript/build, 196 unit tests, 112 integration tests and 38 browser scenarios. The current revision is live on Render after a browser-test synchronization fix; all 33 core scenarios passed again locally. All 19 checks passed on the current deployment; CI also passed for the exact deployed commit. A live visual review also confirmed `/workspace/ai` and the ten-minute-late preview; see RELEASE_READINESS.md.
+The account-access revision, commit `27546c0a125688351033ef7ba1439dc950b1565e`, is live on Render. Local verification on 8 November 2026 passed TypeScript/build, 196 unit tests, 115 integration tests and 43 browser scenarios (37 core, one hosted-checkout fixture and five registration/recovery scenarios). [CI run 42469869009](https://github.com/DhanushYarragunta/direct-order-platform/actions/runs/42469869009) passed for this commit, including the browser suites and Docker build. Seven hosted account-access checks passed again at **11:13:36 IST on 9 November 2026**. The earlier AI release's 19 checks and visual review of `/workspace/ai` remain historical evidence; see [release readiness](RELEASE_READINESS.md) for each release's scope.
 
 ## Suggested review order
 
@@ -41,6 +41,7 @@ The optional assessment package can be regenerated after browser verification wi
 - On mobile, the promotional hero is hidden, reorder suggestions remain visible and allergens are at least 14px. Check the 60-dish menu, nine categories and photo-credit page; verify no horizontal viewport overflow at 320px and 390px.
 - Admin menu: upload a JPEG/PNG/WebP, edit delivery rules, and inspect the licence declaration workflow. Zero-prefixed demo values cannot be declared verified.
 - Privacy: export your customer data, withdraw marketing permission and anonymize an account with no active orders. Ordinary sign-in uses email/mobile plus password. Codes are reserved for signup, password recovery and contact verification; provider configuration and verified contacts govern delivery, and recovery codes are never displayed or faked.
+- Account access: open **Your account** on a phone or tablet, navigate to privacy settings and sign out. Failed preference loads offer a retry; failed sign-out keeps the account dialog available for another attempt. Account-access help explains email delivery failures. AWS granted SES production access on 8 November 2026, and the signed-in console reconfirmed production access in Mumbai on 9 November. The hosted account checks do not establish signup/recovery email receipt or inbox placement after that approval.
 - Reports: compare the existing repeat-purchaser count with eligible/pending 30-day cohorts. Record a completed-period app-order baseline for one outlet and verify the direct/app denominator. Timings exclude absent measurements and distinguish demo from live browser samples.
 - Run the isolated five-minute `npm run test:soak`; it adds evidence, not a production-capacity claim. Use the one-hour staging and human-study procedures before launch.
 
